@@ -1,0 +1,37 @@
+{
+  "name": "one-life",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc",
+    "sim:day": "tsx src/sim/demo-day.ts",
+    "sim:students": "tsx src/sim/demo-two-students.ts",
+    "sim:half-year": "tsx src/sim/demo-half-year.ts",
+    "sim:body": "tsx src/sim/demo-body.ts",
+    "sim:npc": "tsx src/sim/demo-npc-week.ts",
+    "sim:npc-stats": "tsx src/sim/npc-distribution.ts",
+    "sim:memory": "tsx src/sim/demo-memory.ts",
+    "sim:talk": "tsx src/sim/demo-talk.ts",
+    "sim:family": "tsx src/sim/family-stats.ts",
+    "sim:justice": "tsx src/sim/justice-stats.ts",
+    "sim:afterschool": "tsx src/sim/afterschool.ts",
+    "sim:social": "tsx src/sim/social-year.ts",
+    "sim:world": "tsx src/sim/world-year.ts",
+    "sim:play": "tsx src/sim/play-demo.ts",
+    "play": "tsx src/cli/play.ts",
+    "sim:shift": "tsx src/sim/shift-demo.ts",
+    "sim:seasons": "tsx src/sim/seasons.ts",
+    "sim:carry": "tsx src/sim/carry-demo.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "type": "module"
+}
