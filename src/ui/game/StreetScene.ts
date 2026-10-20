@@ -35,6 +35,8 @@ interface Layout {
   /** 행인이 다니는 줄 (y) */
   lanes?: number[];
   follow: boolean;
+  /** 타일 지도 (글자 한 칸 = 바닥 한 칸) — 있으면 그림 한 장 대신 타일로 조립한다 */
+  tiles?: string[];
 }
 const CODE_LAYOUT: Layout = { w: W, h: H, top: WALK_TOP, bottom: WALK_BOTTOM, start: { x: 600, y: 140 }, doors: DOORS, bg: false, view: { w: 320, h: 192 }, follow: true };
 /**
@@ -71,7 +73,50 @@ const ART_LAYOUT: Layout = {
     { x: 398, label: '[E] 출근', kind: 'work' },
   ],
 };
-export const streetLayout = (): Layout => (hasArt('scenes/town') ? TOWN_LAYOUT : hasArt('scenes/street') ? ART_LAYOUT : CODE_LAYOUT);
+/**
+ * 타일 조립 동네 (시험판: ?map=tiles). 한 칸 = 48도트 = 약 3m (차로 한 폭).
+ * 글자 지도: . 회색 보도  r 붉은 보도  t 점자블록  ^ 연석(위쪽 인도)  v 연석(아래쪽 인도)
+ *            = 아스팔트  - 차선  y 중앙선  # 횡단보도  a 골목  s 계단  g 잔디  d 흙  f 화단  w 하천
+ *            k 산책로  p 단지 보도  o 운동장  u 인조잔디  B 건물 자리  D 건물 문
+ */
+const CELL = 48;
+const TILE_MAP = [
+  'BBBBBBsaaBBBBBBffuuuuu',
+  'BBBBBB.aaBBBBBBffuuuuu',
+  'BBBDBB.aaBDBBDBffooooo',
+  'rrrrrr.aa......ppooooo',
+  'rrrrrr.........ppppppp',
+  '^^^^^^^^^^^tt^^^^^^^^^',
+  '===========##=========',
+  'yyyyyyyyyyy##yyyyyyyyy',
+  '-----------##---------',
+  '===========##=========',
+  'vvvvvvvvvvvttvvvvvvvvv',
+  '.....ggggfffgggg......',
+  'kkkkkkkkkkkkkkkkkkkkkk',
+  'wwwwwwwwwwwwwwwwwwwwww',
+];
+const TILE_ART: Record<string, { key: string; angle?: number }> = {
+  '.': { key: 'tiles/sidewalk' }, r: { key: 'tiles/brick' }, t: { key: 'tiles/tactile' },
+  '^': { key: 'tiles/curb', angle: -90 }, v: { key: 'tiles/curb', angle: 90 },
+  '=': { key: 'tiles/asphalt' }, '-': { key: 'tiles/lane', angle: 90 }, y: { key: 'tiles/center', angle: 90 }, '#': { key: 'tiles/crosswalk' },
+  a: { key: 'tiles/alley' }, s: { key: 'tiles/stairs' }, g: { key: 'tiles/grass' }, d: { key: 'tiles/dirt' }, f: { key: 'tiles/flowers' },
+  w: { key: 'tiles/water' }, k: { key: 'tiles/track', angle: 90 }, p: { key: 'tiles/aptwalk' }, o: { key: 'tiles/field' }, u: { key: 'tiles/turf' },
+  B: { key: 'tiles/alley' }, D: { key: 'tiles/sidewalk' },
+};
+/** 걸을 수 없는 칸: 차도(횡단보도 빼고)·하천·화단·건물 */
+const BLOCKED = new Set(['=', '-', 'y', 'w', 'f', 'B']);
+const tileDoor = (col: number): Door =>
+  col <= 5 ? { x: 0, label: '[E] 집에 간다 (알바 빠짐)', kind: 'home' } : col <= 11 ? { x: 0, label: '[E] 출근', kind: 'work' } : { x: 0, label: '[E] PC방 간다 (알바 빠짐)', kind: 'pc' };
+const TILE_LAYOUT: Layout = {
+  w: TILE_MAP[0]!.length * CELL, h: TILE_MAP.length * CELL, top: 0, bottom: TILE_MAP.length * CELL,
+  start: { x: 18.5 * CELL, y: 4.5 * CELL }, bg: true, view: { w: 480, h: 270 }, follow: true, tiles: TILE_MAP,
+  lanes: [3.6 * CELL, 4.5 * CELL, 11.5 * CELL],
+  doors: TILE_MAP.flatMap((row, y) => [...row].flatMap((ch, x) => (ch === 'D' ? [{ ...tileDoor(x), x: (x + 0.5) * CELL, y: (y + 1) * CELL + 6 }] : []))),
+};
+
+export const streetLayout = (): Layout =>
+  typeof location !== 'undefined' && location.search.includes('map=tiles') && hasArt('tiles/asphalt') ? TILE_LAYOUT : (hasArt('scenes/town') ? TOWN_LAYOUT : hasArt('scenes/street') ? ART_LAYOUT : CODE_LAYOUT);
 
 export class StreetScene extends Phaser.Scene {
   private me!: Walker;
@@ -106,8 +151,9 @@ export class StreetScene extends Phaser.Scene {
     if (import.meta.env.DEV) Object.assign(window, { street: this });
     this.cameras.main.setBounds(0, 0, L.w, L.h).setZoom(ZOOM);
     this.sky = this.add.graphics().setDepth(-10);
+    if (L.tiles) this.buildTiles(L.tiles);
     if (L.bg) {
-      this.add.image(0, 0, L.bgKey!).setOrigin(0).setDepth(0);
+      if (L.bgKey) this.add.image(0, 0, L.bgKey).setOrigin(0).setDepth(0);
       // 그림은 맑은 저녁이다 — 흐리거나 비·눈 오면 어둡게 덮는다
       const dim = today.sky === 'clear' ? 0 : today.sky === 'cloudy' ? 0.18 : 0.32;
       if (dim) this.add.graphics().setDepth(15_000).fillStyle(0x1e2638, dim + 0.1).fillRect(0, 0, L.w, L.h);
@@ -277,7 +323,7 @@ export class StreetScene extends Phaser.Scene {
       let nx = Phaser.Math.Clamp(this.me.x + (a.x / len) * speed * dt, 8, this.L.w - 8);
       let ny = Phaser.Math.Clamp(this.me.y + (a.y / len) * speed * dt, this.L.top, this.L.bottom);
       // 걸을 수 있는 곳 밖이면 한 축씩 미끄러진다 (벽을 따라 걷기)
-      if (this.L.walk && !this.walkable(nx, ny)) {
+      if ((this.L.walk || this.L.tiles) && !this.walkable(nx, ny)) {
         if (this.walkable(nx, this.me.y)) ny = this.me.y;
         else if (this.walkable(this.me.x, ny)) nx = this.me.x;
         else (nx = this.me.x), (ny = this.me.y);
@@ -335,7 +381,39 @@ export class StreetScene extends Phaser.Scene {
     session.streetMinute = 16 * 60 + 40 + Math.floor((this.time.now - this.started) / 1500);
   }
 
+  /** 글자 지도 → 바닥 타일 + 건물 자리(그림이 오기 전까지 임시 상자) */
+  private buildTiles(map: string[]) {
+    map.forEach((row, y) => {
+      [...row].forEach((ch, x) => {
+        const t = TILE_ART[ch];
+        if (!t || !hasArt(t.key)) return;
+        this.add.image((x + 0.5) * CELL, (y + 0.5) * CELL, t.key).setAngle(t.angle ?? 0).setDepth(0);
+      });
+    });
+    // 건물 자리: 이어진 B 덩어리마다 임시 상자 (지붕 + 앞벽)
+    const seen = new Set<string>();
+    map.forEach((row, y) => [...row].forEach((ch, x) => {
+      if ((ch !== 'B' && ch !== 'D') || seen.has(`${x},${y}`)) return;
+      let x2 = x;
+      while (x2 + 1 < row.length && 'BD'.includes(row[x2 + 1]!)) x2++;
+      let y2 = y;
+      while (y2 + 1 < map.length && 'BD'.includes(map[y2 + 1]![x]!)) y2++;
+      for (let yy = y; yy <= y2; yy++) for (let xx = x; xx <= x2; xx++) seen.add(`${xx},${yy}`);
+      const g = this.add.graphics().setDepth((y2 + 1) * CELL - 1);
+      const X = x * CELL, Y = y * CELL, Wd = (x2 - x + 1) * CELL, Ht = (y2 - y + 1) * CELL;
+      g.fillStyle(0x6b5a4a, 1).fillRect(X + 4, Y, Wd - 8, Ht * 0.55);
+      g.fillStyle(0xc9b49a, 1).fillRect(X + 4, Y + Ht * 0.55, Wd - 8, Ht * 0.45);
+      g.lineStyle(2, 0x3b2a1c, 1).strokeRect(X + 4, Y, Wd - 8, Ht);
+      this.add.text(X + Wd / 2, Y + Ht * 0.3, x < 6 ? '빌라 (그림 대기)' : '상가 (그림 대기)', { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: '#fff3dc' }).setOrigin(0.5).setDepth(Y + Ht);
+    }));
+  }
+
   private walkable(x: number, y: number): boolean {
+    if (this.L.tiles) {
+      const row = this.L.tiles[Math.floor(y / CELL)];
+      const ch = row?.[Math.floor(x / CELL)];
+      return !!ch && !BLOCKED.has(ch);
+    }
     return this.L.walk!.some((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
   }
 
