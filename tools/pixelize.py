@@ -91,14 +91,15 @@ def down_mode(img: Image.Image, tw: int, th: int, colors: int = 32) -> Image.Ima
 
 
 def strip_halo(img: Image.Image) -> Image.Image:
-    """배경과 맞닿은 하얀 테두리 잡티 지우기"""
+    """배경과 맞닿은 밝은 테두리 잡티 지우기.
+    AI 도트 캐릭터는 바깥선이 어둡다 — 투명한 곳과 맞닿았는데 밝은 점은 흰 배경이 번진 것"""
     px = img.load()
     w, h = img.size
     kill = []
     for y in range(h):
         for x in range(w):
             r, g, b, a = px[x, y]
-            if a == 0 or min(r, g, b) < 175 or max(r, g, b) - min(r, g, b) > 40:
+            if a == 0 or (0.299 * r + 0.587 * g + 0.114 * b) < 120:
                 continue
             if any(not (0 <= x + dx < w and 0 <= y + dy < h) or px[x + dx, y + dy][3] == 0 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
                 kill.append((x, y))
