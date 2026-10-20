@@ -101,7 +101,8 @@ export function createNpcProfile(id: string, rng: Random, name?: string): NpcPro
   const need = financialNeed(ch.origin, family);
   // 원해서 하는 알바 vs 해야 해서 하는 알바
   const wantsJob = lifeGoals.some((g) => g.goal === 'money' || g.goal === 'escape') || rng.chance(need);
-  const jobDays = need >= 0.7 ? [0, 2, 4, 5, 6] : need >= 0.45 ? [0, 2, 4, 6] : wantsJob ? [2, 4, 6] : [];
+  // 학원 가는 평일엔 알바를 못 잡는다 (시간이 겹친다) — 그런 애는 주말 알바만 한다
+  const jobDays = (need >= 0.7 ? [0, 2, 4, 5, 6] : need >= 0.45 ? [0, 2, 4, 6] : wantsJob ? [2, 4, 6] : []).filter((d) => !academyDays.includes(d));
   // 형편이 어려울수록 용돈이 줄어든다
   const allowanceWeekly = Math.round(({ rich: 70000, normal: 40000, poor: 15000 }[ch.origin] * (1 - need * 0.8)) / 1000) * 1000;
   const traits = assignTraits({ p: personality, att: attitudes, origin: ch.origin }, rng);

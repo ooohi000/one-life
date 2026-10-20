@@ -129,7 +129,7 @@ export interface Job {
 export function newJob(rng: Random): Job {
   const boss: BossType = rng.pick(['kind', 'kind', 'strict', 'strict', 'stingy']);
   return {
-    store: rng.pick(['GS25 ○○역점', 'CU ○○사거리점', '세븐일레븐 ○○초교점', '이마트24 ○○아파트점']),
+    store: rng.pick(['하루24 역앞점', '늘해편의점 사거리점', '다온마트24 초교점', '새봄편의점 아파트점']), // 가상 상호
     boss,
     hourly: boss === 'stingy' && rng.chance(0.5) ? 9000 : MIN_WAGE,
     contract: boss !== 'stingy' || rng.chance(0.3),
