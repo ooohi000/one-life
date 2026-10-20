@@ -6,6 +6,7 @@
 import Phaser from 'phaser';
 import { session, isWet } from '../session';
 import { axis, ensureTexture, FONT, makeKeys, Walker } from './common';
+import { hasArt, pickArt, preloadArt } from './art';
 import { lookFor, type Look } from './pixel';
 
 const W = 780;
@@ -38,6 +39,10 @@ export class StreetScene extends Phaser.Scene {
     super('street');
   }
 
+  preload() {
+    preloadArt(this);
+  }
+
   create() {
     const w = session.w!;
     const today = w.today;
@@ -47,7 +52,8 @@ export class StreetScene extends Phaser.Scene {
     this.drawStreet();
     const look: Look = { skin: '#f1c9a5', hair: '#1d1a1a', top: today.outfit >= 3 ? '#1f2d4a' : '#f2f2f2', bottom: '#2a3550', shoes: '#222', outfit: today.outfit, backpack: '#2b2b2b' };
     if (today.outfit === 4) look.top = '#1b1b1b';
-    this.me = new Walker(this, look, 600, 140);
+    const sheet = today.outfit === 0 ? 'chars/player_summer' : today.outfit <= 2 ? 'chars/player_school' : 'chars/player_winter';
+    this.me = new Walker(this, look, 600, 140, sheet);
     this.me.dir = 'left';
     this.cameras.main.startFollow(this.me.img, true, 0.12, 0.12);
     this.keys = makeKeys(this);
@@ -60,12 +66,21 @@ export class StreetScene extends Phaser.Scene {
     if (wet) for (let i = 0; i < n; i++) this.drops.push({ x: Math.random() * 320, y: Math.random() * 192, s: 0.6 + Math.random() * 0.6 });
     // 지나가는 사람들 (비 오면 대부분 우산)
     for (let i = 0; i < 6; i++) {
-      const p = new Walker(this, lookFor(i * 31 + w.day, today.outfit, i % 2 ? 'student' : 'worker'), Math.random() * W, WALK_TOP + 2 + Math.random() * 18);
+      const kind = i % 2 ? 'student' : 'worker';
+      const p = new Walker(this, lookFor(i * 31 + w.day, today.outfit, kind), Math.random() * W, WALK_TOP + 2 + Math.random() * 18, pickArt(kind === 'student' ? 'chars/student_' : 'chars/adult_', i));
       if (wet && today.sky !== 'snow' && Math.random() < 0.85) p.holdUmbrella(['#2f6fd1', '#d62828', '#3a3a3a', '#f2c230', '#8fb3d9'][i % 5]!);
       this.walkers.push({ w: p, vx: (Math.random() < 0.5 ? -1 : 1) * (22 + Math.random() * 16) });
     }
     // 우산: 챙겨 왔으면 편다
     if (wet && today.sky !== 'snow' && session.hasUmbrella()) this.me.holdUmbrella('#2f7d4f');
+  }
+
+  /** 그림 파일이 있으면 아랫변 가운데를 (cx, bottom)에 맞춰 width 폭으로 놓는다 */
+  private art(key: string, cx: number, bottom: number, width: number, depth = 10): boolean {
+    if (!hasArt(key)) return false;
+    const img = this.add.image(cx, bottom, key).setOrigin(0.5, 1).setDepth(depth);
+    img.setScale(width / img.width);
+    return true;
   }
 
   private drawStreet() {
@@ -76,7 +91,9 @@ export class StreetScene extends Phaser.Scene {
     // 먼 건물 실루엣
     g.fillStyle(0x8792a3, 0.55);
     for (let x = 0; x < W; x += 34) g.fillRect(x, 40 + ((x * 7) % 30), 30, 80);
-    // 인도·차도
+    // 인도·차도 (바닥 타일 그림이 있으면 깐다)
+    if (hasArt('street/sidewalk')) this.add.tileSprite(0, 120, W, 35, 'street/sidewalk').setOrigin(0).setDepth(1);
+    if (hasArt('street/road')) this.add.tileSprite(0, 155, W, 37, 'street/road').setOrigin(0).setDepth(1);
     g.fillStyle(0xb9b3a8, 1).fillRect(0, 120, W, 34);
     for (let x = 0; x < W; x += 12) g.fillStyle(0xa9a398, 1).fillRect(x, 120, 1, 34);
     g.fillStyle(0x8a8378, 1).fillRect(0, 152, W, 3);
@@ -88,23 +105,32 @@ export class StreetScene extends Phaser.Scene {
     const b = this.add.graphics().setDepth(10);
     const label = (x: number, y: number, t: string, col = '#ffffff', bg = '#00000000') => this.add.text(x, y, t, { fontFamily: FONT, fontSize: '8px', color: col, backgroundColor: bg, padding: { x: 2, y: 1 } }).setOrigin(0.5).setDepth(11);
     // 집 — 빌라
+    if (this.art('street/villa', 76, 122, 124)) label(76, 24, '우리 집', '#ffffff', '#00000088');
+    else {
     b.fillStyle(0xc9b9a2, 1).fillRect(16, 30, 120, 90);
     for (let fl = 0; fl < 3; fl++) for (let k = 0; k < 4; k++) b.fillStyle(0x6d8aa8, 1).fillRect(24 + k * 28, 40 + fl * 24, 16, 12);
     b.fillStyle(0x7a6450, 1).fillRect(66, 98, 20, 22);
     b.fillStyle(0xd9d9d9, 1).fillRect(68, 92, 16, 5);
     label(76, 24, '우리 집 (빌라)', '#ffffff', '#00000088');
+    }
     // 골목
+    if (!this.art('street/alley', 158, 122, 40)) {
     b.fillStyle(0x4b4f57, 1).fillRect(140, 60, 36, 60);
     b.fillStyle(0x2f3238, 1).fillRect(146, 70, 4, 50);
     b.fillStyle(0xffe08a, 1).fillRect(144, 66, 8, 4);
     label(158, 54, '골목', '#cccccc');
+    }
     // PC방
+    if (!this.art('street/pcbang', 232, 122, 108)) {
     b.fillStyle(0x3b3f6b, 1).fillRect(180, 50, 104, 70);
     b.fillStyle(0x15172b, 1).fillRect(186, 70, 92, 26);
     b.fillStyle(0x7a5cff, 1).fillRect(196, 54, 72, 12);
     label(232, 60, 'PC방 24시', '#ffffff');
     b.fillStyle(0x222436, 1).fillRect(222, 100, 20, 20);
-    // 편의점
+    }
+    // 편의점 (간판 글씨는 가게 이름이 바뀌니 코드가 쓴다 — 그림의 간판은 비워 둔다)
+    if (this.art('street/store', 362, 124, 128)) label(362, 57, session.w!.playerJob?.store ?? '편의점', '#ffffff');
+    else {
     b.fillStyle(0xf2f2f2, 1).fillRect(300, 50, 124, 70);
     b.fillStyle(0x2f7d4f, 1).fillRect(300, 50, 124, 14);
     b.fillStyle(0xf2c230, 1).fillRect(300, 64, 124, 3);
@@ -114,9 +140,14 @@ export class StreetScene extends Phaser.Scene {
     b.fillStyle(0x9fd3ec, 1).fillRect(352, 84, 22, 36);
     b.fillStyle(0x555555, 1).fillRect(362, 84, 1, 36);
     b.fillStyle(0xf9e79f, 0.6).fillRect(300, 120, 124, 4); // 불빛
+    }
     // 공사장/공터 — 도시의 변화
     const lot = w.city.lots.find((l) => l.area === w.player!.area && l.stage !== 'standing') ?? w.city.lots.find((l) => l.area === w.player!.area && (l.use === 'parking' || l.use === 'empty'));
-    if (lot && lot.stage !== 'standing') {
+    const lotArt = !lot || lot.stage === 'standing' ? 'street/lot_parking' : lot.stage === 'frame' || lot.stage === 'finishing' ? 'street/lot_frame' : lot.stage === 'excavation' || lot.stage === 'demolition' ? 'street/lot_dig' : 'street/lot_fence';
+    if (this.art(lotArt, 491, 122, 112)) {
+      const st = lot?.stage ?? 'standing';
+      label(491, 84, st === 'standing' ? lot?.name ?? '공영주차장' : `${lot!.name} ${({ designated: '재개발 구역', relocating: '이주 중', demolition: '철거 중', fenced: '공사 예정', excavation: '터파기', frame: '골조 공사', finishing: '마감 공사' } as Record<string, string>)[st] ?? ''}`, '#ffffff', '#000000aa');
+    } else if (lot && lot.stage !== 'standing') {
       const st = lot.stage;
       if (st === 'frame' || st === 'finishing') {
         b.fillStyle(0x9a9a9a, 1).fillRect(450, st === 'finishing' ? 20 : 50, 80, 100);
@@ -134,11 +165,14 @@ export class StreetScene extends Phaser.Scene {
       label(491, 104, lot?.name ?? '공영주차장', '#ffffff', '#000000aa');
     }
     // 학교
+    if (this.art('street/school', 670, 122, 224)) label(670, 14, '○○고등학교', '#ffffff', '#00000088');
+    else {
     b.fillStyle(0xd8c7a8, 1).fillRect(560, 20, 220, 92);
     for (let fl = 0; fl < 3; fl++) for (let k = 0; k < 8; k++) b.fillStyle(0x7a9cbf, 1).fillRect(568 + k * 26, 28 + fl * 26, 16, 14);
     b.fillStyle(0x4a6b3f, 1).fillRect(560, 112, 220, 8);
     b.fillStyle(0x555555, 1).fillRect(586, 92, 4, 28).fillRect(626, 92, 4, 28);
     label(670, 14, '○○고등학교', '#ffffff', '#00000088');
+    }
     // 가로수 (계절)
     const d = today.date.day;
     // 3월 초는 앙상하고, 벚꽃 → 신록 → 초록 → 단풍 → 낙엽
@@ -147,7 +181,12 @@ export class StreetScene extends Phaser.Scene {
       : m >= 5 && m <= 9 ? [0x4f8a3f, 0x3d6e31]
       : m === 10 || (m === 11 && d <= 20) ? [0xd9862b, 0xc0442b]
       : null;
+    const treeArt = `street/tree_${(m === 3 && d >= 28) || (m === 4 && d <= 12) ? 'blossom' : m === 4 || (m === 5 && d <= 10) ? 'fresh' : m >= 5 && m <= 9 ? 'summer' : m === 10 || (m === 11 && d <= 20) ? 'autumn' : 'bare'}`;
     for (let x = 30; x < W; x += 110) {
+      if (this.art(treeArt, x + 2, 127, 32, 127)) {
+        if (today.sky === 'snow') this.add.graphics().setDepth(128).fillStyle(0xffffff, 1).fillRect(x - 10, 80, 8, 2).fillRect(x + 8, 78, 7, 2);
+        continue;
+      }
       const t = this.add.graphics().setDepth(120);
       t.fillStyle(0x5a4030, 1).fillRect(x, 96, 4, 30);
       if (leaf) {

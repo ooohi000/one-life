@@ -7,6 +7,7 @@ import Phaser from 'phaser';
 import type { Customer, Product, Task } from '../../engine/work';
 import { session } from '../session';
 import { axis, bubble, FONT, hex, makeKeys, Walker } from './common';
+import { hasArt, pickArt, preloadArt } from './art';
 import { lookFor, type Look } from './pixel';
 
 const W = 320;
@@ -62,7 +63,7 @@ export class StoreScene extends Phaser.Scene {
   private spills = new Map<string, { x: number; y: number; g: Phaser.GameObjects.Graphics }>();
   private marks!: Phaser.GameObjects.Graphics;
   private hint!: Phaser.GameObjects.Text;
-  private windows!: Phaser.GameObjects.Graphics;
+  private windows: Phaser.GameObjects.Graphics | null = null;
   private rain: Array<{ x: number; y: number }> = [];
   private seen = 0;
   private outfit: Look['outfit'] = 1;
@@ -71,16 +72,22 @@ export class StoreScene extends Phaser.Scene {
     super('store');
   }
 
+  preload() {
+    preloadArt(this);
+  }
+
   create() {
     const s = session.shift!;
     const w = session.w!;
     this.outfit = w.today.outfit;
-    this.drawRoom();
+    // 매장 그림이 있으면 통째로 깔고, 없으면 코드로 그린다 (부딪히는 곳·일하는 자리는 그대로)
+    if (hasArt('scenes/store')) this.add.image(0, 0, 'scenes/store').setOrigin(0).setDisplaySize(W, H).setDepth(0);
+    else this.drawRoom();
     const look: Look = {
       skin: '#f1c9a5', hair: '#1d1a1a', top: '#f2f2f2', bottom: '#2a3550', shoes: '#222',
       outfit: Math.min(this.outfit, 1) as Look['outfit'], vest: '#2f7d4f', hairLen: 0,
     };
-    this.me = new Walker(this, look, STATION.pos.x, STATION.pos.y);
+    this.me = new Walker(this, look, STATION.pos.x, STATION.pos.y, 'chars/player_work');
     this.keys = makeKeys(this);
     this.marks = this.add.graphics().setDepth(9_000);
     this.hint = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#1b1b1bcc', padding: { x: 2, y: 1 } }).setOrigin(0.5, 1).setDepth(9_500);
@@ -143,6 +150,7 @@ export class StoreScene extends Phaser.Scene {
 
   private drawWindows(minute: number) {
     const g = this.windows;
+    if (!g) return;
     g.clear();
     // 저녁 → 밤
     const t = Phaser.Math.Clamp((minute - 17.5 * 60) / 120, 0, 1);
@@ -205,7 +213,8 @@ export class StoreScene extends Phaser.Scene {
     for (const c of queue) {
       if (this.shoppers.has(c.n)) continue;
       const look = lookFor(c.n, this.outfit, c.kind);
-      const w = new Walker(this, look, DOOR.x, DOOR.y);
+      const sheet = pickArt(c.kind === 'student' || c.visitor?.age === 16 ? 'chars/student_' : c.kind === 'elder' ? 'chars/elder_' : 'chars/adult_', c.n) ?? pickArt('chars/adult_', c.n);
+      const w = new Walker(this, look, DOOR.x, DOOR.y, sheet);
       const shelf = c.items[0]?.shelf ?? 'snack';
       const b = BROWSE[shelf];
       const path = [{ x: DOOR.x, y: LANE }];
@@ -273,7 +282,7 @@ export class StoreScene extends Phaser.Scene {
         }
       }
       sh.w.update(dtMs);
-      sh.tag?.setPosition(Math.round(sh.w.x), Math.round(sh.w.y - 24));
+      sh.tag?.setPosition(Math.round(sh.w.x), Math.round(sh.w.y - sh.w.height));
     }
   }
 
@@ -371,12 +380,12 @@ export class StoreScene extends Phaser.Scene {
       const who = m[1]!;
       const line = m[2]!;
       if (who.startsWith('사장님')) {
-        bubble(this, this.me.x, this.me.y - 26, `(전화) ${line}`, 3200);
+        bubble(this, this.me.x, this.me.y - this.me.height - 2, `(전화) ${line}`, 3200);
         continue;
       }
       for (const sh of this.shoppers.values()) {
         if (who === sh.c.label || (sh.c.visitor && who.startsWith(sh.c.visitor.name))) {
-          bubble(this, sh.w.x, sh.w.y - 25, line);
+          bubble(this, sh.w.x, sh.w.y - sh.w.height - 1, line);
           break;
         }
       }

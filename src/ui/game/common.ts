@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { hasArt } from './art';
 import { drawPerson, drawUmbrella, type Dir, type Look } from './pixel';
 
 export const FONT = 'Galmuri7, Galmuri11, monospace';
@@ -19,9 +20,17 @@ export class Walker {
   private t = 0;
   private key = '';
   umbrella: Phaser.GameObjects.Image | null = null;
+  /** 그림 파일 캐릭터 시트 (4×4: 행=아래·왼·오른·위, 열=서기·걸음1·서기·걸음2). 없으면 코드 도트 */
+  sheet: string | null = null;
 
-  constructor(private readonly scene: Phaser.Scene, public look: Look, x: number, y: number) {
-    this.img = scene.add.image(x, y, this.texture(0)).setOrigin(0.5, 1);
+  constructor(private readonly scene: Phaser.Scene, public look: Look, x: number, y: number, sheet?: string | null) {
+    if (sheet && hasArt(sheet)) this.sheet = sheet;
+    this.img = this.sheet ? scene.add.sprite(x, y, this.sheet, 0).setOrigin(0.5, 1) as unknown as Phaser.GameObjects.Image : scene.add.image(x, y, this.texture(0)).setOrigin(0.5, 1);
+  }
+
+  /** 키 (그림이 있으면 그림 높이) */
+  get height() {
+    return this.sheet ? 32 : 24;
   }
 
   get x() {
@@ -49,7 +58,7 @@ export class Walker {
       return;
     }
     if (this.umbrella) return;
-    const key = ensureTexture(this.scene, `umb:${color}`, () => drawUmbrella(color));
+    const key = hasArt('street/umbrella') ? 'street/umbrella' : ensureTexture(this.scene, `umb:${color}`, () => drawUmbrella(color));
     this.umbrella = this.scene.add.image(this.x, this.y, key).setOrigin(0.5, 1);
   }
 
@@ -65,15 +74,27 @@ export class Walker {
   update(dt: number) {
     if (this.moving) this.t += dt;
     else this.t = 0;
-    const seq: Array<0 | 1 | 2> = [1, 0, 2, 0];
-    const frame = this.moving ? seq[Math.floor(this.t / 140) % 4]! : 0;
-    const k = this.texture(frame);
-    if (k !== this.key) {
-      this.img.setTexture(k);
-      this.key = k;
+    const step = Math.floor(this.t / 140) % 4;
+    if (this.sheet) {
+      const row = { down: 0, left: 1, right: 2, up: 3 }[this.dir];
+      const col = this.moving ? [1, 2, 3, 0][step]! : 0;
+      const k = `${row}:${col}`;
+      if (k !== this.key) {
+        this.img.setFrame(row * 4 + col);
+        this.key = k;
+      }
+      if (this.look.wet) this.img.setTint(0xb4bed2);
+      else this.img.clearTint();
+    } else {
+      const seq: Array<0 | 1 | 2> = [1, 0, 2, 0];
+      const k = this.texture(this.moving ? seq[step]! : 0);
+      if (k !== this.key) {
+        this.img.setTexture(k);
+        this.key = k;
+      }
     }
     this.img.setDepth(this.img.y);
-    if (this.umbrella) this.umbrella.setPosition(this.x, this.y - 17).setDepth(this.img.y + 0.5);
+    if (this.umbrella) this.umbrella.setPosition(this.x, this.y - this.height + 7).setDepth(this.img.y + 0.5);
   }
 
   destroy() {
