@@ -25,16 +25,19 @@
     "play": "tsx src/cli/play.ts",
     "sim:shift": "tsx src/sim/shift-demo.ts",
     "sim:seasons": "tsx src/sim/seasons.ts",
-    "sim:carry": "tsx src/sim/carry-demo.ts"
+    "sim:carry": "tsx src/sim/carry-demo.ts",
+    "sim:bodygen": "tsx src/sim/body-preview.ts saves/body-preview.png"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "pngjs": "^7.0.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
