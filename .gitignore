@@ -2,3 +2,4 @@ node_modules
 saves
 dist
 .DS_Store
+__pycache__/
