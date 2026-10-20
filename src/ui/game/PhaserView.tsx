@@ -1,17 +1,18 @@
 import Phaser from 'phaser';
 import { useEffect, useRef } from 'react';
 import { StoreScene } from './StoreScene';
-import { StreetScene } from './StreetScene';
+import { StreetScene, streetLayout } from './StreetScene';
 
 /** 장면 하나를 띄우는 캔버스. 장면이 바뀌면 게임을 새로 만든다 (상태는 엔진·세션에 있으니 잃을 게 없다) */
 export function PhaserView({ scene }: { scene: 'street' | 'store' }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const size = scene === 'street' && streetLayout().bg ? { w: 480, h: 270 } : { w: 320, h: 192 };
     const game = new Phaser.Game({
       type: Phaser.AUTO,
       parent: ref.current!,
-      width: 320,
-      height: 192,
+      width: size.w,
+      height: size.h,
       pixelArt: true,
       backgroundColor: '#1b1b1b',
       scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },

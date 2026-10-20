@@ -15,11 +15,26 @@ const WALK_TOP = 128;
 const WALK_BOTTOM = 150;
 const SPEED = 62;
 
-const DOORS = [
+type Door = { x: number; label: string; kind: 'home' | 'pc' | 'alley' | 'work' };
+const DOORS: Door[] = [
   { x: 76, label: '[E] 집에 간다 (알바 빠짐)', kind: 'home' as const },
   { x: 232, label: '[E] PC방 간다 (알바 빠짐)', kind: 'pc' as const },
   { x: 362, label: '[E] 출근', kind: 'work' as const },
 ];
+
+/** 길 배치. 그림(scenes/street.png, 480×270 한 화면)이 있으면 그 그림의 문 위치·인도에 맞춘다 */
+interface Layout { w: number; h: number; top: number; bottom: number; start: { x: number; y: number }; doors: Door[]; bg: boolean }
+const CODE_LAYOUT: Layout = { w: W, h: H, top: WALK_TOP, bottom: WALK_BOTTOM, start: { x: 600, y: 140 }, doors: DOORS, bg: false };
+const ART_LAYOUT: Layout = {
+  w: 480, h: 270, top: 209, bottom: 225, start: { x: 462, y: 217 }, bg: true,
+  doors: [
+    { x: 80, label: '[E] 집에 간다 (알바 빠짐)', kind: 'home' },
+    { x: 197, label: '[E] 골목으로 샌다 (알바 빠짐)', kind: 'alley' },
+    { x: 280, label: '[E] PC방 간다 (알바 빠짐)', kind: 'pc' },
+    { x: 398, label: '[E] 출근', kind: 'work' },
+  ],
+};
+export const streetLayout = (): Layout => (hasArt('scenes/street') ? ART_LAYOUT : CODE_LAYOUT);
 
 export class StreetScene extends Phaser.Scene {
   private me!: Walker;
@@ -34,6 +49,7 @@ export class StreetScene extends Phaser.Scene {
   private soaked = false;
   private started = 0;
   private gone = false;
+  private L: Layout = CODE_LAYOUT;
 
   constructor() {
     super('street');
@@ -47,13 +63,21 @@ export class StreetScene extends Phaser.Scene {
     const w = session.w!;
     const today = w.today;
     this.started = this.time.now;
-    this.cameras.main.setBounds(0, 0, W, H);
+    this.L = streetLayout();
+    const L = this.L;
+    this.cameras.main.setBounds(0, 0, L.w, L.h);
     this.sky = this.add.graphics().setDepth(-10).setScrollFactor(0);
-    this.drawStreet();
+    if (L.bg) {
+      this.add.image(0, 0, 'scenes/street').setOrigin(0).setDepth(0);
+      // 그림은 맑은 저녁이다 — 흐리거나 비·눈 오면 어둡게 덮는다
+      const dim = today.sky === 'clear' ? 0 : today.sky === 'cloudy' ? 0.18 : 0.32;
+      if (dim) this.add.rectangle(0, 0, L.w, L.h, 0x2a3346, dim).setOrigin(0).setDepth(15_000);
+      if (today.notes[0]) this.add.text(L.w / 2, 6, today.notes[0], { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#000000aa', padding: { x: 3, y: 2 } }).setOrigin(0.5, 0).setDepth(20_002);
+    } else this.drawStreet();
     const look: Look = { skin: '#f1c9a5', hair: '#1d1a1a', top: today.outfit >= 3 ? '#1f2d4a' : '#f2f2f2', bottom: '#2a3550', shoes: '#222', outfit: today.outfit, backpack: '#2b2b2b' };
     if (today.outfit === 4) look.top = '#1b1b1b';
     const sheet = today.outfit === 0 ? 'chars/player_summer' : today.outfit <= 2 ? 'chars/player_school' : 'chars/player_winter';
-    this.me = new Walker(this, look, 600, 140, sheet);
+    this.me = new Walker(this, look, L.start.x, L.start.y, sheet);
     this.me.dir = 'left';
     this.cameras.main.startFollow(this.me.img, true, 0.12, 0.12);
     this.keys = makeKeys(this);
@@ -63,11 +87,11 @@ export class StreetScene extends Phaser.Scene {
     this.hint = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#1b1b1bcc', padding: { x: 2, y: 1 } }).setOrigin(0.5, 1).setDepth(20_001);
     const wet = isWet(today);
     const n = today.sky === 'typhoon' ? 160 : today.sky === 'monsoon' ? 120 : today.sky === 'snow' ? 70 : 80;
-    if (wet) for (let i = 0; i < n; i++) this.drops.push({ x: Math.random() * 320, y: Math.random() * 192, s: 0.6 + Math.random() * 0.6 });
+    if (wet) for (let i = 0; i < n; i++) this.drops.push({ x: Math.random() * L.w, y: Math.random() * L.h, s: 0.6 + Math.random() * 0.6 });
     // 지나가는 사람들 (비 오면 대부분 우산)
     for (let i = 0; i < 6; i++) {
       const kind = i % 2 ? 'student' : 'worker';
-      const p = new Walker(this, lookFor(i * 31 + w.day, today.outfit, kind), Math.random() * W, WALK_TOP + 2 + Math.random() * 18, pickArt(kind === 'student' ? 'chars/student_' : 'chars/adult_', i));
+      const p = new Walker(this, lookFor(i * 31 + w.day, today.outfit, kind), Math.random() * L.w, L.top + 2 + Math.random() * (L.bottom - L.top - 2), pickArt(kind === 'student' ? 'chars/student_' : 'chars/adult_', i));
       if (wet && today.sky !== 'snow' && Math.random() < 0.85) p.holdUmbrella(['#2f6fd1', '#d62828', '#3a3a3a', '#f2c230', '#8fb3d9'][i % 5]!);
       this.walkers.push({ w: p, vx: (Math.random() < 0.5 ? -1 : 1) * (22 + Math.random() * 16) });
     }
@@ -209,8 +233,8 @@ export class StreetScene extends Phaser.Scene {
     if (a.x || a.y) {
       const len = Math.hypot(a.x, a.y);
       const speed = SPEED * (session.w!.playerCarry?.walkSpeed() ?? 1);
-      const nx = Phaser.Math.Clamp(this.me.x + (a.x / len) * speed * dt, 8, W - 8);
-      const ny = Phaser.Math.Clamp(this.me.y + (a.y / len) * speed * dt, WALK_TOP, WALK_BOTTOM);
+      const nx = Phaser.Math.Clamp(this.me.x + (a.x / len) * speed * dt, 8, this.L.w - 8);
+      const ny = Phaser.Math.Clamp(this.me.y + (a.y / len) * speed * dt, this.L.top, this.L.bottom);
       this.me.moveTo(nx, ny);
     } else this.me.moving = false;
     this.me.update(dtMs);
@@ -228,12 +252,12 @@ export class StreetScene extends Phaser.Scene {
     // 행인·차
     for (const p of this.walkers) {
       let x = p.w.x + p.vx * dt;
-      if (x < -10) x = W + 10;
-      if (x > W + 10) x = -10;
+      if (x < -10) x = this.L.w + 10;
+      if (x > this.L.w + 10) x = -10;
       p.w.moveTo(x, p.w.y);
       p.w.update(dtMs);
     }
-    if (Math.random() < dt * 0.25) {
+    if (!this.L.bg && Math.random() < dt * 0.25) {
       const g = this.add.graphics().setDepth(160);
       const col = [0xd62828, 0xf2f2f2, 0x2b2b2b, 0x2f6fd1, 0x9a9a9a][Math.floor(Math.random() * 5)]!;
       const dir = Math.random() < 0.5 ? 1 : -1;
@@ -253,7 +277,7 @@ export class StreetScene extends Phaser.Scene {
 
     this.drawSky(today);
     // 문 앞 안내
-    const door = DOORS.find((d) => Math.abs(d.x - this.me.x) < 16);
+    const door = this.L.doors.find((d) => Math.abs(d.x - this.me.x) < 16);
     if (door && !blocked) this.hint.setText(door.label).setPosition(Math.round(this.me.x - this.cameras.main.scrollX), Math.round(this.me.y - 30)).setVisible(true).setScrollFactor(0);
     else this.hint.setVisible(false);
     session.streetMinute = 16 * 60 + 40 + Math.floor((this.time.now - this.started) / 1500);
@@ -262,6 +286,7 @@ export class StreetScene extends Phaser.Scene {
   private drawSky(today: { sky: string }) {
     const s = this.sky;
     s.clear();
+    if (this.L.bg) return this.drawWeather(today);
     const gray = ['rain', 'shower', 'monsoon', 'typhoon', 'snow', 'cloudy'].includes(today.sky);
     const top = gray ? 0x6f7b8a : 0x6fa8dc;
     const bottom = gray ? 0xa9b2bd : 0xf3c58f;
@@ -269,6 +294,10 @@ export class StreetScene extends Phaser.Scene {
       const c = Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(top), Phaser.Display.Color.ValueToColor(bottom), 130, y);
       s.fillStyle(Phaser.Display.Color.GetColor(c.r, c.g, c.b), 1).fillRect(0, y, 320, 4);
     }
+    this.drawWeather(today);
+  }
+
+  private drawWeather(today: { sky: string }) {
     const fx = this.fx;
     fx.clear();
     if (!this.drops.length) return;
@@ -278,9 +307,9 @@ export class StreetScene extends Phaser.Scene {
     for (const d of this.drops) {
       d.y += (snow ? 0.6 : 4.5) * d.s;
       d.x += snow ? Math.sin(d.y / 10) * 0.3 : wind * d.s * 0.5;
-      if (d.y > 192) {
+      if (d.y > this.L.h) {
         d.y = -4;
-        d.x = Math.random() * 320;
+        d.x = Math.random() * this.L.w;
       }
       if (snow) fx.fillRect(d.x, d.y, 1, 1);
       else fx.fillRect(d.x, d.y, 1, 3);
@@ -289,7 +318,7 @@ export class StreetScene extends Phaser.Scene {
 
   private interact() {
     if (session.confirm || this.gone) return;
-    const door = DOORS.find((d) => Math.abs(d.x - this.me.x) < 16);
+    const door = this.L.doors.find((d) => Math.abs(d.x - this.me.x) < 16);
     if (!door) return;
     if (door.kind === 'work') {
       this.gone = true;
@@ -298,7 +327,7 @@ export class StreetScene extends Phaser.Scene {
       return;
     }
     session.ask(
-      door.kind === 'home' ? '알바 빠지고 그냥 집에 갈까? (사장님한테 연락은 안 했다)' : '알바 빠지고 PC방 갈까? (사장님한테 연락은 안 했다)',
+      door.kind === 'home' ? '알바 빠지고 그냥 집에 갈까? (사장님한테 연락은 안 했다)' : door.kind === 'alley' ? '골목으로 새서 놀다 갈까? 알바는… (사장님한테 연락은 안 했다)' : '알바 빠지고 PC방 갈까? (사장님한테 연락은 안 했다)',
       () => session.skipWork(),
     );
   }
