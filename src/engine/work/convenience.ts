@@ -193,6 +193,18 @@ function arrivalRate(minuteOfDay: number): number {
   return 0.22;
 }
 
+export interface ShiftOptions {
+  start: number;
+  end: number;
+  raining?: boolean;
+  /**
+   * 화면에서 직접 할 때: 게임 시간이 압축되니(1분 ≈ 1초) 사람이 따라갈 수 있게
+   * 손님 오는 빈도(pace)를 줄이고, 기다려 주는 시간(patience)을 늘린다. 자동 근무는 1·1.
+   */
+  pace?: number;
+  patience?: number;
+}
+
 /**
  * 근무 한 번. tick()으로 1분씩 흘러가고, 할 일(tasks)과 고민(dilemma)이 생긴다.
  * 플레이어(화면)든 자동 손이든 perform()/decide()로 처리한다.
@@ -227,7 +239,7 @@ export class ConvenienceShift {
     readonly rng: Random,
     /** 이 동네에 사는 아는 사람들 (오늘 손님으로 올 수 있는) */
     visitors: KnownVisitor[] = [],
-    readonly opts: { start: number; end: number; raining?: boolean } = { start: 17 * 60 + 30, end: 21 * 60 + 30 },
+    readonly opts: ShiftOptions = { start: 17 * 60 + 30, end: 21 * 60 + 30 },
   ) {
     this.minute = opts.start;
     this.end = opts.end;
@@ -250,7 +262,7 @@ export class ConvenienceShift {
     this.minute++;
     this.report.minutes++;
     // 손님
-    if (rng.chance(arrivalRate(this.minute) * (this.opts.raining ? 1.3 : 1))) this.arrive();
+    if (rng.chance(arrivalRate(this.minute) * (this.opts.raining ? 1.3 : 1) * (this.opts.pace ?? 1))) this.arrive();
     // 기다리다 지친 손님
     for (const c of [...this.queue]) {
       if (this.minute - c.arrived > c.patience) {
@@ -286,13 +298,16 @@ export class ConvenienceShift {
     if (this.doing && this.minute >= this.busyUntil) this.doing = null;
   }
 
-  /** 할 일을 한다 — result는 미니게임 결과 */
-  perform(taskId: string, result: HandResult): void {
+  /**
+   * 할 일을 한다 — result는 미니게임 결과.
+   * realtime: 화면에서 직접 한 경우 그동안 시계는 이미 흘렀다(tick을 화면이 불렀다) → 시간을 더 보내지 않는다.
+   */
+  perform(taskId: string, result: HandResult, realtime = false): void {
     const t = this.tasks.find((x) => x.id === taskId);
     if (!t || this.dilemma) return;
     this.tasks.splice(this.tasks.indexOf(t), 1);
     const q = Math.max(0, Math.min(1, result.quality));
-    const took = Math.max(1, Math.round(t.baseMin * (1.6 - q)));
+    const took = realtime ? 0 : Math.max(1, Math.round(t.baseMin * (1.6 - q)));
     this.doing = t;
     this.busyUntil = this.minute + took;
     if (t.kind === 'restock' && t.shelf) this.restocking.add(t.shelf);
@@ -467,7 +482,7 @@ export class ConvenienceShift {
     const total = items.reduce((s, p) => s + p.price, 0);
     const pays = rng.chance(0.7) ? total : Math.ceil(total / 10000) * 10000 + (rng.chance(0.2) ? 10000 : 0);
     const c: Customer = {
-      n: this.n, kind, items, arrived: this.minute, patience: kind === 'elder' ? 8 : kind === 'rude' ? 3 : 5, pays, minor, visitor,
+      n: this.n, kind, items, arrived: this.minute, patience: (kind === 'elder' ? 8 : kind === 'rude' ? 3 : 5) * (this.opts.patience ?? 1), pays, minor, visitor,
       label: visitor ? `${visitor.name}(${({ friend: '친구', classmate: '같은 반', bully: '일진', parentFriend: '엄마 친구', teacher: '선생님', acquaintance: '아는 애' })[visitor.relation]})` : KIND_LABEL[kind],
     };
     this.queue.push(c);

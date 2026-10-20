@@ -1,8 +1,11 @@
 {
   "name": "one-life",
   "version": "1.0.0",
-  "description": "",
+  "description": "도트로 사는 한국 인생 시뮬레이션 — 고등학생부터 죽을 때까지, 인생은 한 번뿐",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc",
     "sim:day": "tsx src/sim/demo-day.ts",
@@ -29,9 +32,19 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
+    "vite": "^8.3.4",
     "vitest": "^5.0.5"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "galmuri": "^2.40.3",
+    "phaser": "^4.2.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
 }

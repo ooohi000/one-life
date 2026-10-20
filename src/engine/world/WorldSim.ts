@@ -325,6 +325,15 @@ export class WorldSim {
     this.record({ t: 'choose', day: this.day, answer });
     // 학교를 안 가면 학교에서 생길 일은 주인공 없이 흘러간다
     if (this.playerDecision.kind === 'school' && answer === 'skip') for (const q of [...this.prompts]) this.answer(q.id, q.options[q.options.length - 1]!.id);
+    // 알바 무단결근: 사장님 평가가 떨어지고 경고가 쌓인다
+    const dcs = this.playerDecision;
+    if (dcs.kind === 'commitment' && dcs.action.id === 'partTime' && answer === 'skip' && this.playerJob && !this.playerJob.fired) {
+      const job = this.playerJob;
+      job.standing -= 20;
+      job.warnings++;
+      if (job.warnings >= 3) job.fired = true;
+      this.emit(this.player!, 'school', job.fired ? '알바를 또 빠졌다. 사장님: "내일부터 나오지 마."' : '알바를 말없이 빠졌다. 사장님한테 부재중 전화가 세 통 와 있다.', job.fired ? 4 : 2);
+    }
     this.advanceFlow(answer);
   }
 
@@ -421,7 +430,7 @@ export class WorldSim {
    * 알바 가는 갈림길에서 "간다"를 고르면 근무가 시작된다. 화면은 이 shift를 직접 조작하고, 끝나면 finishShift().
    * 손님으로는 이 동네 사는 같은 반·친구·일진, 친구 엄마가 섞여 온다.
    */
-  startShift(): ConvenienceShift | null {
+  startShift(screen?: { pace: number; patience: number }): ConvenienceShift | null {
     const pl = this.player;
     const dcs = this.playerDecision;
     if (!pl || !this.playerJob || this.playerJob.fired || dcs?.kind !== 'commitment' || dcs.action.id !== 'partTime') return null;
@@ -438,7 +447,7 @@ export class WorldSim {
     if (mom && r.chance(0.5)) visitors.push({ id: `${mom.id}p0`, name: `${mom.name}네 엄마`, age: 46, relation: 'parentFriend' });
     const condition = Math.max(0.1, 1 - pl.life.body.drowsiness * 0.6 - pl.life.ch.body.stress / 250);
     const raining = ['rain', 'shower', 'monsoon', 'typhoon'].includes(this.today.sky);
-    return new ConvenienceShift(this.playerJob, { id: pl.id, name: pl.name, age: 16, tact: pl.life.ch.stats.tact, streetSmart: pl.life.ch.stats.streetSmart, speech: pl.life.ch.stats.speech, condition }, r, visitors, { start: 17 * 60 + 30, end: 21 * 60 + 30, raining });
+    return new ConvenienceShift(this.playerJob, { id: pl.id, name: pl.name, age: 16, tact: pl.life.ch.stats.tact, streetSmart: pl.life.ch.stats.streetSmart, speech: pl.life.ch.stats.speech, condition }, r, visitors, { start: 17 * 60 + 30, end: 21 * 60 + 30, raining, ...screen });
   }
 
   /** 근무가 끝났다: 하루 흐름을 진행하고, 결과를 세계에 남긴다 */
