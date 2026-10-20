@@ -81,10 +81,18 @@ const ART_LAYOUT: Layout = {
  */
 const CELL = 48;
 const TILE_MAP = [
+  // 위 7줄: 건물이 위로 솟는 자리 (건물 그림 뒤에 가려진다)
+  'BBBBBB.aaBBBBBBffuuuuu',
+  'BBBBBB.aaBBBBBBffuuuuu',
+  'BBBBBB.aaBBBBBBffuuuuu',
+  'BBBBBB.aaBBBBBBffuuuuu',
+  'BBBBBB.aaBBBBBBffuuuuu',
+  'BBBBBB.aaBBBBBBffuuuuu',
+  'BBBBBB.aaBBBBBBffuuuuu',
   'BBBBBBsaaBBBBBBffuuuuu',
   'BBBBBB.aaBBBBBBffuuuuu',
-  'BBBDBB.aaBDBBDBffooooo',
-  'rrrrrr.aa......ppooooo',
+  'BBBDBB.aaBDBBDBffddddd',
+  'rrrrrr.aa......ppddddd',
   'rrrrrr.........ppppppp',
   '^^^^^^^^^^^tt^^^^^^^^^',
   '===========##=========',
@@ -95,6 +103,11 @@ const TILE_MAP = [
   '.....ggggfffgggg......',
   'kkkkkkkkkkkkkkkkkkkkkk',
   'wwwwwwwwwwwwwwwwwwwwww',
+];
+/** 건물 그림: 땅에 닿는 아랫변 가운데(cx, bottom)에 폭 w로 세운다 */
+const TILE_BUILDINGS = [
+  { key: 'buildings/villa', cx: 3 * CELL, bottom: 10 * CELL, w: 200 },
+  { key: 'buildings/shop-a', cx: 12 * CELL, bottom: 10 * CELL, w: 236 },
 ];
 const TILE_ART: Record<string, { key: string; angle?: number }> = {
   '.': { key: 'tiles/sidewalk' }, r: { key: 'tiles/brick' }, t: { key: 'tiles/tactile' },
@@ -107,16 +120,22 @@ const TILE_ART: Record<string, { key: string; angle?: number }> = {
 /** 걸을 수 없는 칸: 차도(횡단보도 빼고)·하천·화단·건물 */
 const BLOCKED = new Set(['=', '-', 'y', 'w', 'f', 'B']);
 const tileDoor = (col: number): Door =>
-  col <= 5 ? { x: 0, label: '[E] 집에 간다 (알바 빠짐)', kind: 'home' } : col <= 11 ? { x: 0, label: '[E] 출근', kind: 'work' } : { x: 0, label: '[E] PC방 간다 (알바 빠짐)', kind: 'pc' };
+  col <= 5 ? { x: 0, label: '[E] 집에 간다 (알바 빠짐)', kind: 'home' } : col <= 11 ? { x: 0, label: '[E] 출근 (하루24)', kind: 'work' } : { x: 0, label: '[E] 치킨집 가서 논다 (알바 빠짐)', kind: 'pc' };
 const TILE_LAYOUT: Layout = {
   w: TILE_MAP[0]!.length * CELL, h: TILE_MAP.length * CELL, top: 0, bottom: TILE_MAP.length * CELL,
-  start: { x: 18.5 * CELL, y: 4.5 * CELL }, bg: true, view: { w: 480, h: 270 }, follow: true, tiles: TILE_MAP,
-  lanes: [3.6 * CELL, 4.5 * CELL, 11.5 * CELL],
-  doors: TILE_MAP.flatMap((row, y) => [...row].flatMap((ch, x) => (ch === 'D' ? [{ ...tileDoor(x), x: (x + 0.5) * CELL, y: (y + 1) * CELL + 6 }] : []))),
+  start: { x: 18.5 * CELL, y: 11.5 * CELL }, bg: true, view: { w: 600, h: 338 }, follow: true, tiles: TILE_MAP,
+  lanes: [10.6 * CELL, 11.5 * CELL, 18.5 * CELL],
+  // 문은 건물 그림 속 실제 문 위치 (빌라 현관, 하루24, 치킨집)
+  doors: [
+    { ...tileDoor(3), x: 3 * CELL, y: 10 * CELL + 8 },
+    { ...tileDoor(10), x: 12 * CELL - 118 + 0.245 * 236, y: 10 * CELL + 8 },
+    { ...tileDoor(13), x: 12 * CELL - 118 + 0.66 * 236, y: 10 * CELL + 8 },
+  ],
 };
 
 export const streetLayout = (): Layout =>
-  typeof location !== 'undefined' && location.search.includes('map=tiles') && hasArt('tiles/asphalt') ? TILE_LAYOUT : (hasArt('scenes/town') ? TOWN_LAYOUT : hasArt('scenes/street') ? ART_LAYOUT : CODE_LAYOUT);
+  // 타일 동네가 기본 (건물 그림이 들어오면서). 예전 한 장짜리 지도는 ?map=old
+  hasArt('tiles/asphalt') && (hasArt('buildings/shop-a') || (typeof location !== 'undefined' && location.search.includes('map=tiles'))) && !(typeof location !== 'undefined' && location.search.includes('map=old')) ? TILE_LAYOUT : (hasArt('scenes/town') ? TOWN_LAYOUT : hasArt('scenes/street') ? ART_LAYOUT : CODE_LAYOUT);
 
 export class StreetScene extends Phaser.Scene {
   private me!: Walker;
@@ -165,7 +184,11 @@ export class StreetScene extends Phaser.Scene {
     const sheet = [today.outfit === 0 ? 'chars/player_summer' : today.outfit <= 2 ? 'chars/player_school' : 'chars/player_winter', 'chars/player_school'].find(hasArt);
     this.me = new Walker(this, look, L.start.x, L.start.y, sheet);
     this.me.dir = 'left';
-    if (L.follow) this.cameras.main.startFollow(this.me.img, true, 0.12, 0.12);
+    if (L.follow) {
+      this.cameras.main.startFollow(this.me.img, true, 0.12, 0.12);
+      // 건물이 위로 높으니 주인공을 화면 아래쪽에 두고 위를 더 보여 준다
+      if (L.tiles) this.cameras.main.setFollowOffset(0, 70);
+    }
     else this.cameras.main.centerOn(L.w / 2, L.h / 2);
     this.keys = makeKeys(this);
     this.keys.act.on('down', () => this.interact());
@@ -390,6 +413,13 @@ export class StreetScene extends Phaser.Scene {
         this.add.image((x + 0.5) * CELL, (y + 0.5) * CELL, t.key).setAngle(t.angle ?? 0).setDepth(0);
       });
     });
+    // 건물 그림이 있으면 세운다 (앞에 선 사람이 건물을 가리도록 깊이 = 땅에 닿는 선)
+    const built = TILE_BUILDINGS.filter((b) => hasArt(b.key));
+    for (const b of built) {
+      const img = this.add.image(b.cx, b.bottom, b.key).setOrigin(0.5, 1);
+      img.setScale(b.w / img.width).setDepth(b.bottom - 1);
+    }
+    if (built.length) return;
     // 건물 자리: 이어진 B 덩어리마다 임시 상자 (지붕 + 앞벽)
     const seen = new Set<string>();
     map.forEach((row, y) => [...row].forEach((ch, x) => {
