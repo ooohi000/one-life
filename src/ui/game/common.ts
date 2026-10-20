@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { hasArt } from './art';
+import { hasArt, sheetFrames } from './art';
 import { drawPerson, drawUmbrella, type Dir, type Look } from './pixel';
 
 export const FONT = 'Galmuri7, Galmuri11, monospace';
@@ -24,8 +24,11 @@ export class Walker {
   sheet: string | null = null;
 
   constructor(private readonly scene: Phaser.Scene, public look: Look, x: number, y: number, sheet?: string | null) {
-    if (sheet && hasArt(sheet)) this.sheet = sheet;
-    this.img = this.sheet ? scene.add.sprite(x, y, this.sheet, 0).setOrigin(0.5, 1) as unknown as Phaser.GameObjects.Image : scene.add.image(x, y, this.texture(0)).setOrigin(0.5, 1);
+    if (sheet && hasArt(sheet) && scene.textures.exists(sheet)) this.sheet = sheet;
+    if (this.sheet) {
+      const k = sheetFrames(scene, this.sheet);
+      this.img = scene.add.image(x, y, this.sheet, '0').setOrigin(0.5, 1).setScale(k);
+    } else this.img = scene.add.image(x, y, this.texture(0)).setOrigin(0.5, 1);
   }
 
   /** 키 (그림이 있으면 그림 높이) */
@@ -80,7 +83,7 @@ export class Walker {
       const col = this.moving ? [1, 2, 3, 0][step]! : 0;
       const k = `${row}:${col}`;
       if (k !== this.key) {
-        this.img.setFrame(row * 4 + col);
+        this.img.setFrame(String(row * 4 + col));
         this.key = k;
       }
       if (this.look.wet) this.img.setTint(0xb4bed2);

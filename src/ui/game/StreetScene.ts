@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import { session, isWet } from '../session';
 import { axis, ensureTexture, FONT, makeKeys, Walker } from './common';
-import { hasArt, pickArt, preloadArt } from './art';
+import { hasArt, pickArt, preloadArt, ZOOM } from './art';
 import { lookFor, type Look } from './pixel';
 
 const W = 780;
@@ -50,6 +50,7 @@ export class StreetScene extends Phaser.Scene {
   private started = 0;
   private gone = false;
   private L: Layout = CODE_LAYOUT;
+  private note: Phaser.GameObjects.Text | null = null;
 
   constructor() {
     super('street');
@@ -65,29 +66,31 @@ export class StreetScene extends Phaser.Scene {
     this.started = this.time.now;
     this.L = streetLayout();
     const L = this.L;
-    this.cameras.main.setBounds(0, 0, L.w, L.h);
-    this.sky = this.add.graphics().setDepth(-10).setScrollFactor(0);
+    this.cameras.main.setBounds(0, 0, L.w, L.h).setZoom(ZOOM);
+    this.sky = this.add.graphics().setDepth(-10);
     if (L.bg) {
       this.add.image(0, 0, 'scenes/street').setOrigin(0).setDepth(0);
       // 그림은 맑은 저녁이다 — 흐리거나 비·눈 오면 어둡게 덮는다
       const dim = today.sky === 'clear' ? 0 : today.sky === 'cloudy' ? 0.18 : 0.32;
-      if (dim) this.add.rectangle(0, 0, L.w, L.h, 0x2a3346, dim).setOrigin(0).setDepth(15_000);
+      if (dim) this.add.graphics().setDepth(15_000).fillStyle(0x1e2638, dim + 0.1).fillRect(0, 0, L.w, L.h);
       if (today.notes[0]) this.add.text(L.w / 2, 6, today.notes[0], { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#000000aa', padding: { x: 3, y: 2 } }).setOrigin(0.5, 0).setDepth(20_002);
     } else this.drawStreet();
     const look: Look = { skin: '#f1c9a5', hair: '#1d1a1a', top: today.outfit >= 3 ? '#1f2d4a' : '#f2f2f2', bottom: '#2a3550', shoes: '#222', outfit: today.outfit, backpack: '#2b2b2b' };
     if (today.outfit === 4) look.top = '#1b1b1b';
-    const sheet = today.outfit === 0 ? 'chars/player_summer' : today.outfit <= 2 ? 'chars/player_school' : 'chars/player_winter';
+    // 날씨에 맞는 옷 그림이 아직 없으면 교복 그림으로
+    const sheet = [today.outfit === 0 ? 'chars/player_summer' : today.outfit <= 2 ? 'chars/player_school' : 'chars/player_winter', 'chars/player_school'].find(hasArt);
     this.me = new Walker(this, look, L.start.x, L.start.y, sheet);
     this.me.dir = 'left';
-    this.cameras.main.startFollow(this.me.img, true, 0.12, 0.12);
+    if (L.bg) this.cameras.main.centerOn(L.w / 2, L.h / 2);
+    else this.cameras.main.startFollow(this.me.img, true, 0.12, 0.12);
     this.keys = makeKeys(this);
     this.keys.act.on('down', () => this.interact());
     this.keys.space.on('down', () => this.interact());
-    this.fx = this.add.graphics().setDepth(20_000).setScrollFactor(0);
+    this.fx = this.add.graphics().setDepth(20_000);
     this.hint = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#1b1b1bcc', padding: { x: 2, y: 1 } }).setOrigin(0.5, 1).setDepth(20_001);
     const wet = isWet(today);
     const n = today.sky === 'typhoon' ? 160 : today.sky === 'monsoon' ? 120 : today.sky === 'snow' ? 70 : 80;
-    if (wet) for (let i = 0; i < n; i++) this.drops.push({ x: Math.random() * L.w, y: Math.random() * L.h, s: 0.6 + Math.random() * 0.6 });
+    if (wet) for (let i = 0; i < n; i++) this.drops.push({ x: Math.random() * (L.bg ? L.w : 320), y: Math.random() * L.h, s: 0.6 + Math.random() * 0.6 });
     // 지나가는 사람들 (비 오면 대부분 우산)
     for (let i = 0; i < 6; i++) {
       const kind = i % 2 ? 'student' : 'worker';
@@ -222,7 +225,7 @@ export class StreetScene extends Phaser.Scene {
       }
     }
     // 오늘의 한 줄 (벚꽃 만개, 첫눈 …)
-    if (today.notes[0]) this.add.text(160, 8, today.notes[0], { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#000000aa', padding: { x: 3, y: 2 } }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20_002);
+    if (today.notes[0]) this.note = this.add.text(160, 8, today.notes[0], { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#000000aa', padding: { x: 3, y: 2 } }).setOrigin(0.5, 0).setDepth(20_002);
   }
 
   update(_t: number, dtMs: number) {
@@ -275,10 +278,15 @@ export class StreetScene extends Phaser.Scene {
       }
     }
 
+    // 화면에 붙어 있는 것들 (하늘·비·오늘의 한 줄)은 카메라를 따라다닌다
+    const view = this.cameras.main.worldView;
+    this.sky.setPosition(view.x, view.y);
+    this.fx.setPosition(view.x, view.y);
+    this.note?.setPosition(view.x + view.width / 2, view.y + 8);
     this.drawSky(today);
     // 문 앞 안내
     const door = this.L.doors.find((d) => Math.abs(d.x - this.me.x) < 16);
-    if (door && !blocked) this.hint.setText(door.label).setPosition(Math.round(this.me.x - this.cameras.main.scrollX), Math.round(this.me.y - 30)).setVisible(true).setScrollFactor(0);
+    if (door && !blocked) this.hint.setText(door.label).setPosition(Math.round(this.me.x), Math.round(this.me.y - this.me.height - 4)).setVisible(true);
     else this.hint.setVisible(false);
     session.streetMinute = 16 * 60 + 40 + Math.floor((this.time.now - this.started) / 1500);
   }
@@ -309,7 +317,7 @@ export class StreetScene extends Phaser.Scene {
       d.x += snow ? Math.sin(d.y / 10) * 0.3 : wind * d.s * 0.5;
       if (d.y > this.L.h) {
         d.y = -4;
-        d.x = Math.random() * this.L.w;
+        d.x = Math.random() * (this.L.bg ? this.L.w : 320);
       }
       if (snow) fx.fillRect(d.x, d.y, 1, 1);
       else fx.fillRect(d.x, d.y, 1, 3);

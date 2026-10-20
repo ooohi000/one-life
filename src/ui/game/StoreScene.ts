@@ -7,7 +7,7 @@ import Phaser from 'phaser';
 import type { Customer, Product, Task } from '../../engine/work';
 import { session } from '../session';
 import { axis, bubble, FONT, hex, makeKeys, Walker } from './common';
-import { hasArt, pickArt, preloadArt } from './art';
+import { hasArt, pickArt, preloadArt, ZOOM } from './art';
 import { lookFor, type Look } from './pixel';
 
 const W = 320;
@@ -80,6 +80,7 @@ export class StoreScene extends Phaser.Scene {
     const s = session.shift!;
     const w = session.w!;
     this.outfit = w.today.outfit;
+    this.cameras.main.setZoom(ZOOM).centerOn(W / 2, H / 2);
     // 매장 그림이 있으면 통째로 깔고, 없으면 코드로 그린다 (부딪히는 곳·일하는 자리는 그대로)
     if (hasArt('scenes/store')) this.add.image(0, 0, 'scenes/store').setOrigin(0).setDisplaySize(W, H).setDepth(0);
     else this.drawRoom();
@@ -87,7 +88,7 @@ export class StoreScene extends Phaser.Scene {
       skin: '#f1c9a5', hair: '#1d1a1a', top: '#f2f2f2', bottom: '#2a3550', shoes: '#222',
       outfit: Math.min(this.outfit, 1) as Look['outfit'], vest: '#2f7d4f', hairLen: 0,
     };
-    this.me = new Walker(this, look, STATION.pos.x, STATION.pos.y, 'chars/player_work');
+    this.me = new Walker(this, look, STATION.pos.x, STATION.pos.y, ['chars/player_work', 'chars/player_school'].find(hasArt));
     this.keys = makeKeys(this);
     this.marks = this.add.graphics().setDepth(9_000);
     this.hint = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#1b1b1bcc', padding: { x: 2, y: 1 } }).setOrigin(0.5, 1).setDepth(9_500);
@@ -366,7 +367,7 @@ export class StoreScene extends Phaser.Scene {
     const t = !session.activity && !session.shift?.dilemma ? this.taskHere() : null;
     if (t) {
       const label = t.kind === 'checkout' ? `[E] 계산 (${t.customer!.items.length}개)` : t.kind === 'restock' ? '[E] 채우기' : t.kind === 'discard' ? '[E] 폐기' : '[E] 닦기';
-      this.hint.setText(label).setPosition(Math.round(this.me.x), Math.round(this.me.y - 26)).setVisible(true);
+      this.hint.setText(label).setPosition(Math.round(this.me.x), Math.round(this.me.y - this.me.height - 2)).setVisible(true);
     } else this.hint.setVisible(false);
   }
 

@@ -65,6 +65,48 @@ def down(img: Image.Image, tw: int, th: int) -> Image.Image:
     return out
 
 
+def down_mode(img: Image.Image, tw: int, th: int, colors: int = 32) -> Image.Image:
+    """칸마다 가장 많이 나온 색 (AI 그림의 번진 가장자리·잡티에 강하다). 먼저 색을 줄여 두고 센다"""
+    alpha = img.getchannel('A')
+    q = img.convert('RGB').quantize(colors=colors, method=Image.Quantize.MEDIANCUT).convert('RGB')
+    w, h = img.size
+    qp, ap = q.load(), alpha.load()
+    out = Image.new('RGBA', (tw, th))
+    o = out.load()
+    for y in range(th):
+        for x in range(tw):
+            x0, x1 = int(x * w / tw), max(int(x * w / tw) + 1, int((x + 1) * w / tw))
+            y0, y1 = int(y * h / th), max(int(y * h / th) + 1, int((y + 1) * h / th))
+            count, solid, total = {}, 0, 0
+            for yy in range(y0, min(y1, h)):
+                for xx in range(x0, min(x1, w)):
+                    total += 1
+                    if ap[xx, yy] >= 128:
+                        solid += 1
+                        c = qp[xx, yy]
+                        count[c] = count.get(c, 0) + 1
+            if total and solid / total >= 0.45 and count:
+                o[x, y] = (*max(count, key=count.get), 255)
+    return out
+
+
+def strip_halo(img: Image.Image) -> Image.Image:
+    """배경과 맞닿은 하얀 테두리 잡티 지우기"""
+    px = img.load()
+    w, h = img.size
+    kill = []
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a == 0 or min(r, g, b) < 175 or max(r, g, b) - min(r, g, b) > 40:
+                continue
+            if any(not (0 <= x + dx < w and 0 <= y + dy < h) or px[x + dx, y + dy][3] == 0 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                kill.append((x, y))
+    for x, y in kill:
+        px[x, y] = (0, 0, 0, 0)
+    return img
+
+
 def quantize(img: Image.Image, colors: int) -> Image.Image:
     alpha = img.getchannel('A')
     q = img.convert('RGB').quantize(colors=colors, method=Image.Quantize.MEDIANCUT).convert('RGBA')
@@ -84,10 +126,42 @@ def main():
     ap.add_argument('--slice', help='CxR 격자로 잘라 여러 파일로')
     ap.add_argument('--cell', type=int, default=16)
     ap.add_argument('--names', help='잘린 칸 이름 (쉼표)')
+    ap.add_argument('--sheet', help='CxR 캐릭터 시트 → 한 장 (칸마다 발을 바닥에, 머리를 가운데에 맞춤)')
+    ap.add_argument('--frame', default='16x32', help='시트 한 칸 크기')
     a = ap.parse_args()
     img = Image.open(a.src).convert('RGBA')
     if not a.keep_bg:
         img = remove_bg(img, a.tol)
+
+    if a.sheet:
+        cols, rows = map(int, a.sheet.split('x'))
+        fw, fh = map(int, a.frame.split('x'))
+        cw, ch = img.width / cols, img.height / rows
+        cells = []
+        for r in range(rows):
+            for c in range(cols):
+                cell = img.crop((int(c * cw), int(r * ch), int((c + 1) * cw), int((r + 1) * ch)))
+                box = cell.getbbox()
+                cells.append((cell, box))
+        # 모든 칸에 같은 배율 (키가 프레임마다 달라지지 않게) — 제일 큰 키가 프레임 높이-1
+        tallest = max(b[3] - b[1] for _, b in cells if b)
+        k = (fh - 1) / tallest
+        sheet = Image.new('RGBA', (fw * cols, fh * rows))
+        for i, (cell, box) in enumerate(cells):
+            if not box:
+                continue
+            # 머리(위쪽 30%)의 가로 가운데를 기준으로 — 걸음에 다리가 벌어져도 몸이 흔들리지 않게
+            head = cell.crop((box[0], box[1], box[2], box[1] + int((box[3] - box[1]) * 0.3))).getbbox()
+            hx = box[0] + (head[0] + head[2]) / 2 if head else (box[0] + box[2]) / 2
+            sw = int(fw / k)
+            src = cell.crop((int(hx - sw / 2), box[3] - int((fh - 1) / k), int(hx - sw / 2) + sw, box[3]))
+            small = strip_halo(down_mode(src, fw, fh - 1, a.colors))
+            sheet.paste(small, ((i % cols) * fw, (i // cols) * fh + 1))
+        out = quantize(sheet, a.colors)
+        os.makedirs(os.path.dirname(a.dst) or '.', exist_ok=True)
+        out.save(a.dst)
+        print('→', a.dst, out.size)
+        return
 
     if a.slice:
         cols, rows = map(int, a.slice.split('x'))

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { useEffect, useRef } from 'react';
+import { ZOOM } from './art';
 import { StoreScene } from './StoreScene';
 import { StreetScene, streetLayout } from './StreetScene';
 
@@ -11,8 +12,8 @@ export function PhaserView({ scene }: { scene: 'street' | 'store' }) {
     const game = new Phaser.Game({
       type: Phaser.AUTO,
       parent: ref.current!,
-      width: size.w,
-      height: size.h,
+      width: size.w * ZOOM,
+      height: size.h * ZOOM,
       pixelArt: true,
       backgroundColor: '#1b1b1b',
       scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
