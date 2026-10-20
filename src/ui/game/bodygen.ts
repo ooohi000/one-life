@@ -143,10 +143,10 @@ export function measure(p: BodyParams) {
     neck: (m ? 1.5 : 1.25) + mu * 0.8 + fa * 0.7,
     faceFat: fa * 0.9,
     /** 앞뒤 두께 (옆모습) */
-    chestDepth: (m ? 3.4 : 3.2) + mu * 1.0 + fa * 1.0 + (m ? 0 : adult * 0.6),
-    belly: 2.8 + fa * 3.6 - mu * 0.3,
-    backDepth: 3.2 + mu * 0.4 + fa * 0.6,
-    seat: 3.3 + fa * 1.3 + (m ? 0 : adult * 0.5),
+    chestDepth: (m ? 4.6 : 4.3) + mu * 1.2 + fa * 1.2 + (m ? 0 : adult * 0.6),
+    belly: 4.0 + fa * 3.8 - mu * 0.3,
+    backDepth: 4.2 + mu * 0.5 + fa * 0.7,
+    seat: 4.3 + fa * 1.4 + (m ? 0 : adult * 0.5),
     stoop: old * 1.6,
   };
 }
@@ -201,7 +201,7 @@ export function shape(p: BodyParams, view: View, frame: 0 | 1 | 2 | 3): Buf {
   } else {
     // 옆모습 (오른쪽을 본다; 왼쪽은 좌우 뒤집기)
     const bx = cx - 0.5 + s.stoop * 0.3;
-    const swing = step * 3.2;
+    const swing = step * 4.2;
     // 먼 쪽 팔·다리 (어둡게)
     const legs = (near: boolean) => {
       const d = (near ? 1 : -1) * swing;
