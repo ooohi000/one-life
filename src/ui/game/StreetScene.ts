@@ -110,17 +110,18 @@ const TILE_BUILDINGS = [
   { key: 'buildings/villa', cx: 3 * CELL, bottom: 10 * CELL, w: 200 },
   { key: 'buildings/shop-a', cx: 12 * CELL, bottom: 10 * CELL, w: 236 },
 ];
-const TILE_ART: Record<string, { key: string; angle?: number }> = {
-  '.': { key: 'tiles/sidewalk' }, r: { key: 'tiles/brick' }, t: { key: 'tiles/tactile' },
+/** sub: 한 칸에 무늬를 몇×몇으로 깔까 (2면 무늬가 절반 크기로) */
+const TILE_ART: Record<string, { key: string; angle?: number; sub?: number }> = {
+  '.': { key: 'tiles/sidewalk', sub: 2 }, r: { key: 'tiles/brick', sub: 2 }, t: { key: 'tiles/tactile', sub: 2 },
   '^': { key: 'tiles/curb', angle: -90 }, v: { key: 'tiles/curb', angle: 90 },
   '=': { key: 'tiles/asphalt' }, '-': { key: 'tiles/lane', angle: 90 }, y: { key: 'tiles/center', angle: 90 }, '#': { key: 'tiles/crosswalk' },
-  a: { key: 'tiles/alley' }, s: { key: 'tiles/stairs' }, g: { key: 'tiles/grass' }, d: { key: 'tiles/dirt' }, f: { key: 'tiles/flowers' },
-  w: { key: 'tiles/water' }, k: { key: 'tiles/track', angle: 90 }, p: { key: 'tiles/aptwalk' }, o: { key: 'tiles/field' }, u: { key: 'tiles/turf' },
-  B: { key: 'tiles/alley' }, D: { key: 'tiles/sidewalk' }, A: { key: 'tiles/alley' }, F: { key: 'tiles/turf' },
+  a: { key: 'tiles/alley', sub: 2 }, s: { key: 'tiles/stairs' }, g: { key: 'tiles/grass', sub: 2 }, d: { key: 'tiles/dirt', sub: 2 }, f: { key: 'tiles/flowers', sub: 2 },
+  w: { key: 'tiles/water' }, k: { key: 'tiles/track', angle: 90 }, p: { key: 'tiles/aptwalk', sub: 2 }, o: { key: 'tiles/field' }, u: { key: 'tiles/turf' },
+  B: { key: 'tiles/alley', sub: 2 }, D: { key: 'tiles/sidewalk', sub: 2 }, A: { key: 'tiles/alley', sub: 2 }, F: { key: 'tiles/grass', sub: 2 },
 };
 /** 걸을 수 없는 칸: 차도(횡단보도 빼고)·하천·화단·건물 */
 /** 못 걷는 칸: 차도(횡단보도 빼고)·하천·화단·건물(문 칸 포함 — 문 앞 인도에서 들어간다)·학교 담장 안·막다른 골목 */
-const BLOCKED = new Set(['=', '-', 'y', 'w', 'f', 'B', 'D', 'F', 'A']);
+const BLOCKED = new Set(['=', '-', 'y', 'w', 'f', 'B', 'D', 'F', 'A', '^', 'v']);
 const tileDoor = (col: number): Door =>
   col <= 5 ? { x: 0, label: '[E] 집에 간다 (알바 빠짐)', kind: 'home' } : col <= 11 ? { x: 0, label: '[E] 출근 (하루24)', kind: 'work' } : { x: 0, label: '[E] 치킨집 가서 논다 (알바 빠짐)', kind: 'pc' };
 const TILE_LAYOUT: Layout = {
@@ -425,7 +426,13 @@ export class StreetScene extends Phaser.Scene {
       [...row].forEach((ch, x) => {
         const t = TILE_ART[ch];
         if (!t || !hasArt(t.key)) return;
-        this.add.image((x + 0.5) * CELL, (y + 0.5) * CELL, t.key).setAngle(t.angle ?? 0).setDepth(0);
+        const n = t.sub ?? 1;
+        const sz = CELL / n;
+        for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+          // 같은 무늬가 줄 맞춰 반복되지 않게 칸마다 뒤집기를 섞는다
+          const flip = n > 1 ? (x * 7 + y * 13 + i * 3 + j * 5) % 4 : 0;
+          this.add.image(x * CELL + (i + 0.5) * sz, y * CELL + (j + 0.5) * sz, t.key).setDisplaySize(sz, sz).setAngle(t.angle ?? 0).setFlip(flip % 2 === 1, flip > 1).setDepth(0);
+        }
       });
     });
     // 건물 그림이 있으면 세운다 (앞에 선 사람이 건물을 가리도록 깊이 = 땅에 닿는 선)
