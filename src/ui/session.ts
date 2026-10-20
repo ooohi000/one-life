@@ -17,12 +17,12 @@ export type Activity =
   | { kind: 'checkout'; taskId: string; startedAt: number }
   | { kind: 'timing'; taskId: string; taskKind: 'restock' | 'discard' | 'clean'; startedAt: number };
 
-/** 게임 1분 = 실제 몇 ms (4시간 근무 ≈ 3분 반) */
-export const MS_PER_MIN = 900;
+/** 게임 1분 = 실제 몇 ms (4시간 근무 ≈ 2분 남짓) */
+export const MS_PER_MIN = 550;
 /** 빨리 감기 */
 export const MS_PER_MIN_FAST = 60;
 /** 직접 할 때 손님 빈도·인내심 (사람 손 속도에 맞춘 값) */
-export const SCREEN_PACE = { pace: 0.3, patience: 6 };
+export const SCREEN_PACE = { pace: 0.2, patience: 10 };
 export const START = { year: 2026, month: 3, day: 2 };
 const STUDENTS = 120;
 const WD = ['일', '월', '화', '수', '목', '금', '토'];

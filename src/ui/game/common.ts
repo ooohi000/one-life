@@ -25,7 +25,21 @@ export class Walker {
   /** 그림 파일 캐릭터 시트 (4×4: 행=아래·왼·오른·위, 열=서기·걸음1·서기·걸음2). 없으면 코드 도트 */
   sheet: string | null = null;
 
+  private shadow: Phaser.GameObjects.Image;
+
   constructor(private readonly scene: Phaser.Scene, public look: Look, x: number, y: number, sheet?: string | null) {
+    const sk = ensureTexture(scene, 'shadow', () => {
+      const c = document.createElement('canvas');
+      c.width = 14;
+      c.height = 5;
+      const g = c.getContext('2d')!;
+      g.fillStyle = 'rgba(16,20,28,0.32)';
+      g.beginPath();
+      g.ellipse(7, 2.5, 7, 2.5, 0, 0, Math.PI * 2);
+      g.fill();
+      return c;
+    });
+    this.shadow = scene.add.image(x, y, sk).setOrigin(0.5, 0.5);
     if (sheet && hasArt(sheet) && scene.textures.exists(sheet)) this.sheet = sheet;
     if (this.sheet) {
       const k = sheetFrames(scene, this.sheet);
@@ -99,11 +113,13 @@ export class Walker {
       }
     }
     this.img.setDepth(this.img.y);
+    this.shadow.setPosition(this.img.x, this.img.y - 0.5).setDepth(this.img.y - 0.6).setAlpha(this.img.alpha);
     if (this.umbrella) this.umbrella.setPosition(this.x, this.y - this.height + 7).setDepth(this.img.y + 0.5);
   }
 
   destroy() {
     this.img.destroy();
+    this.shadow.destroy();
     this.umbrella?.destroy();
   }
 }

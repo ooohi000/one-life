@@ -6,6 +6,7 @@
 import Phaser from 'phaser';
 import { session, isWet } from '../session';
 import { axis, ensureTexture, FONT, makeKeys, TEXT_RES, Walker } from './common';
+import { sfx } from '../sound';
 import { hasArt, pickArt, preloadArt, ZOOM } from './art';
 import { lookFor, type Look } from './pixel';
 
@@ -82,17 +83,17 @@ const ART_LAYOUT: Layout = {
 const CELL = 48;
 const TILE_MAP = [
   // 위 7줄: 건물이 위로 솟는 자리 (건물 그림 뒤에 가려진다)
-  'BBBBBB.aaBBBBBBffuuuuu',
-  'BBBBBB.aaBBBBBBffuuuuu',
-  'BBBBBB.aaBBBBBBffuuuuu',
-  'BBBBBB.aaBBBBBBffuuuuu',
-  'BBBBBB.aaBBBBBBffuuuuu',
-  'BBBBBB.aaBBBBBBffuuuuu',
-  'BBBBBB.aaBBBBBBffuuuuu',
-  'BBBBBBsaaBBBBBBffuuuuu',
-  'BBBBBB.aaBBBBBBffuuuuu',
-  'BBBDBB.aaBDBBDBffddddd',
-  'rrrrrr.aa......ppddddd',
+  'BBBBBBAAABBBBBBffFFFFF',
+  'BBBBBBAAABBBBBBffFFFFF',
+  'BBBBBBAAABBBBBBffFFFFF',
+  'BBBBBBAAABBBBBBffFFFFF',
+  'BBBBBBAAABBBBBBffFFFFF',
+  'BBBBBBAAABBBBBBffFFFFF',
+  'BBBBBBAAABBBBBBffFFFFF',
+  'BBBBBBsaaBBBBBBffFFFFF',
+  'BBBBBB.aaBBBBBBffFFFFF',
+  'BBBDBB.aaBDBBDBffFFFFF',
+  'rrrrrr.aa......ppppppp',
   'rrrrrr.........ppppppp',
   '^^^^^^^^^^^tt^^^^^^^^^',
   '===========##=========',
@@ -115,10 +116,11 @@ const TILE_ART: Record<string, { key: string; angle?: number }> = {
   '=': { key: 'tiles/asphalt' }, '-': { key: 'tiles/lane', angle: 90 }, y: { key: 'tiles/center', angle: 90 }, '#': { key: 'tiles/crosswalk' },
   a: { key: 'tiles/alley' }, s: { key: 'tiles/stairs' }, g: { key: 'tiles/grass' }, d: { key: 'tiles/dirt' }, f: { key: 'tiles/flowers' },
   w: { key: 'tiles/water' }, k: { key: 'tiles/track', angle: 90 }, p: { key: 'tiles/aptwalk' }, o: { key: 'tiles/field' }, u: { key: 'tiles/turf' },
-  B: { key: 'tiles/alley' }, D: { key: 'tiles/sidewalk' },
+  B: { key: 'tiles/alley' }, D: { key: 'tiles/sidewalk' }, A: { key: 'tiles/alley' }, F: { key: 'tiles/turf' },
 };
 /** 걸을 수 없는 칸: 차도(횡단보도 빼고)·하천·화단·건물 */
-const BLOCKED = new Set(['=', '-', 'y', 'w', 'f', 'B']);
+/** 못 걷는 칸: 차도(횡단보도 빼고)·하천·화단·건물(문 칸 포함 — 문 앞 인도에서 들어간다)·학교 담장 안·막다른 골목 */
+const BLOCKED = new Set(['=', '-', 'y', 'w', 'f', 'B', 'D', 'F', 'A']);
 const tileDoor = (col: number): Door =>
   col <= 5 ? { x: 0, label: '[E] 집에 간다 (알바 빠짐)', kind: 'home' } : col <= 11 ? { x: 0, label: '[E] 출근 (하루24)', kind: 'work' } : { x: 0, label: '[E] 치킨집 가서 논다 (알바 빠짐)', kind: 'pc' };
 const TILE_LAYOUT: Layout = {
@@ -151,6 +153,8 @@ export class StreetScene extends Phaser.Scene {
   private started = 0;
   private gone = false;
   private L: Layout = CODE_LAYOUT;
+  private doorGlow!: Phaser.GameObjects.Graphics;
+  private pushIn = 0;
   private note: Phaser.GameObjects.Text | null = null;
 
   constructor() {
@@ -191,6 +195,7 @@ export class StreetScene extends Phaser.Scene {
     }
     else this.cameras.main.centerOn(L.w / 2, L.h / 2);
     this.keys = makeKeys(this);
+    this.doorGlow = this.add.graphics().setDepth(2);
     this.keys.act.on('down', () => this.interact());
     this.keys.space.on('down', () => this.interact());
     this.fx = this.add.graphics().setDepth(20_000);
@@ -399,6 +404,16 @@ export class StreetScene extends Phaser.Scene {
     this.drawSky(today);
     // 문 앞 안내
     const door = this.nearDoor();
+    this.doorGlow.clear();
+    if (door && !blocked && door.kind !== 'school') {
+      const pulse = 0.18 + Math.sin(this.time.now / 260) * 0.08;
+      this.doorGlow.fillStyle(0xffe6a0, pulse).fillEllipse(door.x, (door.y ?? this.me.y) - 2, 30, 10);
+      // 문 쪽으로 계속 밀면 들어간다 (스타듀처럼)
+      if (a.y < 0 && this.L.tiles) {
+        this.pushIn += dt;
+        if (this.pushIn > 0.25) this.interact();
+      } else this.pushIn = 0;
+    }
     if (door && !blocked) this.hint.setText(door.label).setPosition(Math.round(this.me.x), Math.round(this.me.y - this.me.height - 4)).setVisible(true);
     else this.hint.setVisible(false);
     session.streetMinute = 16 * 60 + 40 + Math.floor((this.time.now - this.started) / 1500);
@@ -418,6 +433,15 @@ export class StreetScene extends Phaser.Scene {
     for (const b of built) {
       const img = this.add.image(b.cx, b.bottom, b.key).setOrigin(0.5, 1);
       img.setScale(b.w / img.width).setDepth(b.bottom - 1);
+      const left = b.cx - b.w / 2;
+      const right = b.cx + b.w / 2;
+      const top = b.bottom - img.displayHeight;
+      const sh = this.add.graphics().setDepth(1);
+      // 오른쪽으로 비스듬히 드리운 그림자
+      const P = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
+      sh.fillStyle(0x10141c, 0.22).fillPoints([P(right - 4, top + 30), P(right + 26, top + 52), P(right + 26, b.bottom + 14), P(right - 4, b.bottom)], true);
+      // 건물 발치: 땅에 붙은 짙은 띠
+      for (let k = 0; k < 4; k++) sh.fillStyle(0x10141c, 0.12 - k * 0.025).fillRect(left, b.bottom + k * 3, b.w + 20, 3);
     }
     if (built.length) return;
     // 건물 자리: 이어진 B 덩어리마다 임시 상자 (지붕 + 앞벽)
@@ -490,7 +514,10 @@ export class StreetScene extends Phaser.Scene {
     if (!door || door.kind === 'school') return;
     if (door.kind === 'work') {
       this.gone = true;
-      this.cameras.main.fadeOut(400);
+      sfx.bell();
+      this.me.dir = 'up';
+      this.tweens.add({ targets: this.me.img, y: this.me.y - 10, alpha: 0, duration: 380 });
+      this.cameras.main.fadeOut(420);
       this.time.delayedCall(420, () => session.startShift());
       return;
     }
