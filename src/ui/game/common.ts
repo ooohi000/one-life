@@ -2,7 +2,9 @@ import Phaser from 'phaser';
 import { hasArt, sheetFrames } from './art';
 import { drawPerson, drawUmbrella, type Dir, type Look } from './pixel';
 
-export const FONT = 'Galmuri7, Galmuri11, monospace';
+export const FONT = '"Pretendard Variable", Pretendard, sans-serif';
+/** 게임 안 글씨 해상도 (캔버스가 2배라 글씨도 곱게) */
+export const TEXT_RES = 4;
 
 /** 캔버스를 텍스처로 (이미 있으면 그대로) */
 export function ensureTexture(scene: Phaser.Scene, key: string, make: () => HTMLCanvasElement): string {
@@ -108,7 +110,7 @@ export class Walker {
 
 /** 머리 위 말풍선 */
 export function bubble(scene: Phaser.Scene, x: number, y: number, text: string, ms = 2600): Phaser.GameObjects.Container {
-  const t = scene.add.text(0, 0, text, { fontFamily: FONT, fontSize: '8px', color: '#1b1b1b', wordWrap: { width: 120, useAdvancedWrap: true } }).setOrigin(0.5, 1);
+  const t = scene.add.text(0, 0, text, { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: '#1b1b1b', wordWrap: { width: 120, useAdvancedWrap: true } }).setOrigin(0.5, 1);
   const w = Math.ceil(t.width) + 6;
   const h = Math.ceil(t.height) + 4;
   const g = scene.add.graphics();

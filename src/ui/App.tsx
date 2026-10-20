@@ -1,4 +1,4 @@
-import { DilemmaBox, Hands, ShiftBottom, ShiftTop } from './components/shift';
+import { Dialogue, DilemmaBox, Hands, ShiftTop, TaskNote } from './components/shift';
 import { Confirm, End, Loading, Morning, Report, Title } from './components/screens';
 import { PhaserView } from './game/PhaserView';
 import { hhmm, useSession } from './session';
@@ -29,9 +29,7 @@ export function App() {
           <div className="stage">
             <PhaserView scene="street" />
             <Confirm />
-          </div>
-          <div className="bar bottom">
-            <div className="muted">초록 간판 편의점 문 앞에서 E — 출근 17:30 · 집·PC방으로 새도 된다 · 이동 ←→↑↓/WASD</div>
+            <div className="keyhint">편의점 문 앞에서 E — 출근 · 이동 WASD/방향키</div>
           </div>
         </div>
       );
@@ -41,10 +39,12 @@ export function App() {
           <ShiftTop />
           <div className="stage">
             <PhaserView scene="store" />
+            <TaskNote />
+            <Dialogue />
             <Hands />
             <DilemmaBox />
+            <div className="keyhint">이동 WASD/방향키 · 일하기 E · 대화 넘기기 Enter</div>
           </div>
-          <ShiftBottom />
         </div>
       );
   }

@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import type { Customer, Product, Task } from '../../engine/work';
 import { session } from '../session';
-import { axis, bubble, FONT, hex, makeKeys, Walker } from './common';
+import { axis, bubble, FONT, hex, makeKeys, TEXT_RES, Walker } from './common';
 import { hasArt, pickArt, preloadArt, ZOOM } from './art';
 import { lookFor, type Look } from './pixel';
 
@@ -92,7 +92,7 @@ const ART_STORE: StoreLayout = {
   spillAreas: [{ x: 120, y: 86, w: 300, h: 8 }, { x: 230, y: 168, w: 260, h: 60 }],
   posMark: 236,
   front: [
-    { x: 18, y: 186, w: 192, h: 46 }, // 계산대 — 알바는 그 뒤에 선다
+    { x: 18, y: 195, w: 192, h: 37 }, // 계산대 — 알바는 그 뒤에 선다 (허리 아래만 가린다)
     { x: 108, y: 102, w: 158, h: 56 }, // 왼쪽 매대
     { x: 290, y: 102, w: 162, h: 56 }, // 오른쪽 매대
     { x: 24, y: 108, w: 58, h: 82 }, // 담배 진열장
@@ -153,7 +153,7 @@ export class StoreScene extends Phaser.Scene {
     this.me = new Walker(this, look, SL.station.pos.x, SL.station.pos.y, ['chars/player_work', 'chars/player_school'].find(hasArt));
     this.keys = makeKeys(this);
     this.marks = this.add.graphics().setDepth(9_000);
-    this.hint = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#1b1b1bcc', padding: { x: 2, y: 1 } }).setOrigin(0.5, 1).setDepth(9_500);
+    this.hint = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: '#ffffff', backgroundColor: '#1b1b1bcc', padding: { x: 2, y: 1 } }).setOrigin(0.5, 1).setDepth(9_500);
     this.keys.act.on('down', () => this.interact());
     this.keys.space.on('down', () => this.interact());
     for (let i = 0; i < 18; i++) this.rain.push({ x: Math.random() * 120, y: Math.random() * 16 });
@@ -210,7 +210,7 @@ export class StoreScene extends Phaser.Scene {
     // 문·창 (밖이 보인다)
     this.windows = this.add.graphics().setDepth(1);
     g.fillStyle(0x777f8c, 1).fillRect(272, 178, 32, 14);
-    this.add.text(288, 172, '입구', { fontFamily: FONT, fontSize: '8px', color: '#555' }).setOrigin(0.5).setDepth(2);
+    this.add.text(288, 172, '입구', { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: '#555' }).setOrigin(0.5).setDepth(2);
   }
 
   private drawWindows(minute: number) {
@@ -261,7 +261,6 @@ export class StoreScene extends Phaser.Scene {
 
     this.syncShoppers(dtMs, s.queue);
     this.syncSpills(s.tasks);
-    this.showEvents();
     this.drawMarks(s.tasks, s.queue);
     this.drawWindows(s.minute);
   }
@@ -287,7 +286,7 @@ export class StoreScene extends Phaser.Scene {
       else path.push({ x: b.x, y: b.y });
       let tag: Phaser.GameObjects.Text | null = null;
       if (c.visitor) {
-        tag = this.add.text(0, 0, c.visitor.name, { fontFamily: FONT, fontSize: '8px', color: c.visitor.relation === 'bully' ? '#ff8a8a' : '#ffe08a', backgroundColor: '#1b1b1baa', padding: { x: 1, y: 0 } }).setOrigin(0.5, 1).setDepth(9_100);
+        tag = this.add.text(0, 0, c.visitor.name, { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: c.visitor.relation === 'bully' ? '#ff8a8a' : '#ffe08a', backgroundColor: '#1b1b1baa', padding: { x: 1, y: 0 } }).setOrigin(0.5, 1).setDepth(9_100);
       }
       this.shoppers.set(c.n, { c, w, path, state: 'enter', wait: 0, tag, arrived: false });
       if (session.shift!.opts.raining && Math.random() < 0.7) w.look = { ...w.look, wet: Math.random() < 0.3 };

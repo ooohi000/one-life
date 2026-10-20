@@ -1,4 +1,4 @@
-import 'galmuri/dist/galmuri.css';
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './styles.css';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
@@ -8,8 +8,8 @@ document.addEventListener('mousedown', (e) => {
   if ((e.target as HTMLElement).closest('button')) e.preventDefault();
 });
 
-// 도트 글꼴을 먼저 받아 둔다 (Phaser 글자가 기본 글꼴로 찍히지 않게)
-Promise.all([document.fonts.load('8px Galmuri7'), document.fonts.load('12px Galmuri11')])
+// 글꼴을 먼저 받아 둔다 (Phaser 글자가 기본 글꼴로 찍히지 않게)
+Promise.all([document.fonts.load('600 12px "Pretendard Variable"'), document.fonts.load('400 12px "Pretendard Variable"')])
   .catch(() => undefined)
   .finally(() => createRoot(document.getElementById('root')!).render(<App />));
 

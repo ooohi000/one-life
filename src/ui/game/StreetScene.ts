@@ -5,7 +5,7 @@
  */
 import Phaser from 'phaser';
 import { session, isWet } from '../session';
-import { axis, ensureTexture, FONT, makeKeys, Walker } from './common';
+import { axis, ensureTexture, FONT, makeKeys, TEXT_RES, Walker } from './common';
 import { hasArt, pickArt, preloadArt, ZOOM } from './art';
 import { lookFor, type Look } from './pixel';
 
@@ -111,7 +111,7 @@ export class StreetScene extends Phaser.Scene {
       // 그림은 맑은 저녁이다 — 흐리거나 비·눈 오면 어둡게 덮는다
       const dim = today.sky === 'clear' ? 0 : today.sky === 'cloudy' ? 0.18 : 0.32;
       if (dim) this.add.graphics().setDepth(15_000).fillStyle(0x1e2638, dim + 0.1).fillRect(0, 0, L.w, L.h);
-      if (today.notes[0]) this.note = this.add.text(0, 0, today.notes[0], { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#000000aa', padding: { x: 3, y: 2 } }).setOrigin(0.5, 0).setDepth(20_002);
+      if (today.notes[0]) this.note = this.add.text(0, 0, today.notes[0], { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: '#ffffff', backgroundColor: '#000000aa', padding: { x: 3, y: 2 } }).setOrigin(0.5, 0).setDepth(20_002);
     } else this.drawStreet();
     const look: Look = { skin: '#f1c9a5', hair: '#1d1a1a', top: today.outfit >= 3 ? '#1f2d4a' : '#f2f2f2', bottom: '#2a3550', shoes: '#222', outfit: today.outfit, backpack: '#2b2b2b' };
     if (today.outfit === 4) look.top = '#1b1b1b';
@@ -125,7 +125,7 @@ export class StreetScene extends Phaser.Scene {
     this.keys.act.on('down', () => this.interact());
     this.keys.space.on('down', () => this.interact());
     this.fx = this.add.graphics().setDepth(20_000);
-    this.hint = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#1b1b1bcc', padding: { x: 2, y: 1 } }).setOrigin(0.5, 1).setDepth(20_001);
+    this.hint = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: '#ffffff', backgroundColor: '#1b1b1bcc', padding: { x: 2, y: 1 } }).setOrigin(0.5, 1).setDepth(20_001);
     const wet = isWet(today);
     const n = today.sky === 'typhoon' ? 160 : today.sky === 'monsoon' ? 120 : today.sky === 'snow' ? 70 : 80;
     if (wet) for (let i = 0; i < n; i++) this.drops.push({ x: Math.random() * L.view.w, y: Math.random() * L.view.h, s: 0.6 + Math.random() * 0.6 });
@@ -168,7 +168,7 @@ export class StreetScene extends Phaser.Scene {
     if (today.sky === 'snow') g.fillStyle(0xffffff, 0.8).fillRect(0, 120, W, 2);
 
     const b = this.add.graphics().setDepth(10);
-    const label = (x: number, y: number, t: string, col = '#ffffff', bg = '#00000000') => this.add.text(x, y, t, { fontFamily: FONT, fontSize: '8px', color: col, backgroundColor: bg, padding: { x: 2, y: 1 } }).setOrigin(0.5).setDepth(11);
+    const label = (x: number, y: number, t: string, col = '#ffffff', bg = '#00000000') => this.add.text(x, y, t, { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: col, backgroundColor: bg, padding: { x: 2, y: 1 } }).setOrigin(0.5).setDepth(11);
     // 집 — 빌라
     if (this.art('street/villa', 76, 122, 124)) label(76, 24, '우리 집', '#ffffff', '#00000088');
     else {
@@ -263,7 +263,7 @@ export class StreetScene extends Phaser.Scene {
       }
     }
     // 오늘의 한 줄 (벚꽃 만개, 첫눈 …)
-    if (today.notes[0]) this.note = this.add.text(160, 8, today.notes[0], { fontFamily: FONT, fontSize: '8px', color: '#ffffff', backgroundColor: '#000000aa', padding: { x: 3, y: 2 } }).setOrigin(0.5, 0).setDepth(20_002);
+    if (today.notes[0]) this.note = this.add.text(160, 8, today.notes[0], { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: '#ffffff', backgroundColor: '#000000aa', padding: { x: 3, y: 2 } }).setOrigin(0.5, 0).setDepth(20_002);
   }
 
   update(_t: number, dtMs: number) {

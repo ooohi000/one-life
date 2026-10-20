@@ -31,31 +31,94 @@ export function ShiftTop() {
   );
 }
 
-const KIND_COLOR: Record<string, string> = { customer: '#cfe3ff', task: '#ffe08a', dilemma: '#ffb3b3', boss: '#b3ffcc', people: '#ffd1f0', trouble: '#ff8a8a' };
-
-export function ShiftBottom() {
+/** 할 일 (스타듀의 퀘스트 메모처럼 화면 왼쪽 위에 작게) */
+export function TaskNote() {
   const s = useSession();
   const sh = s.shift;
   if (!sh) return null;
   const todo = sh.tasks.filter((t) => t.kind !== 'checkout');
-  const ev = sh.report.events.slice(-5);
   return (
-    <div className="bar bottom">
-      <div className="todo">
-        <div className="label">할 일</div>
-        {sh.queue.length > 0 && <div>• 계산 대기 {sh.queue.length}명</div>}
-        {todo.map((t) => <div key={t.id}>• {t.label}</div>)}
-        {!sh.queue.length && !todo.length && <div className="muted">한가하다. 폰 보면 사장님이 CCTV로 본다.</div>}
-      </div>
-      <div className="feed">
-        {ev.map((e, i) => (
-          <div key={sh.report.events.length - 5 + i} style={{ color: KIND_COLOR[e.kind] }}>
-            <span className="muted">{hhmm(e.minute)}</span> {e.text}
-          </div>
-        ))}
-      </div>
-      <div className="keys muted">이동 ←↑↓→/WASD · 일하기 E/Space</div>
+    <div className="note-card">
+      <div className="note-title">할 일</div>
+      {sh.queue.length > 0 && <div>계산 기다리는 손님 {sh.queue.length}명</div>}
+      {todo.map((t) => <div key={t.id}>{t.label}</div>)}
+      {!sh.queue.length && !todo.length && <div className="dim">한가하다</div>}
     </div>
+  );
+}
+
+type Line = { who: string; text: string };
+/** 엔진이 남긴 말 한 줄 → 대화창에 띄울 말 (사람이 한 말만) */
+function speech(text: string): Line | null {
+  const m = /^(.+?): "(.+)"$/.exec(text);
+  return m ? { who: m[1]!, text: m[2]! } : null;
+}
+
+/**
+ * 대화창 (스타듀처럼 화면 아래 나무 틀). 손님·사장님이 한 말이 한 줄씩 타자 치듯 나온다.
+ * 게임은 멈추지 않는다 — 읽는 동안에도 손님은 기다린다. 클릭/Enter로 넘긴다.
+ * 말이 아닌 일(정전, 폐기 시간…)은 위에 잠깐 뜨는 알림으로.
+ */
+export function Dialogue() {
+  const s = useSession();
+  const ev = s.shift?.report.events ?? [];
+  const seen = useRef(0);
+  const [queue, setQueue] = useState<Line[]>([]);
+  const [toasts, setToasts] = useState<Array<{ id: number; text: string }>>([]);
+  const [shown, setShown] = useState(0);
+
+  useEffect(() => {
+    if (seen.current > ev.length) seen.current = 0;
+    const fresh = ev.slice(seen.current);
+    seen.current = ev.length;
+    const lines: Line[] = [];
+    for (const e of fresh) {
+      if (e.kind === 'dilemma') continue; // 양심 선택은 따로 창이 뜬다
+      const l = speech(e.text);
+      if (l) lines.push(l);
+      else if (e.kind === 'trouble' || e.text.startsWith('할 일')) {
+        const id = Math.random();
+        setToasts((t) => [...t.slice(-2), { id, text: e.text.replace(/^할 일: /, '할 일 — ') }]);
+        setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500);
+      }
+    }
+    if (lines.length) setQueue((q) => [...q, ...lines].slice(-4));
+  }, [ev.length]);
+
+  const cur = queue[0];
+  // 타자 효과
+  useEffect(() => {
+    setShown(0);
+    if (!cur) return;
+    const id = setInterval(() => setShown((n) => (n >= cur.text.length ? n : n + 1)), 28);
+    return () => clearInterval(id);
+  }, [cur]);
+  // 다 나오면 잠깐 있다가 다음 줄
+  useEffect(() => {
+    if (!cur || shown < cur.text.length) return;
+    const id = setTimeout(() => setQueue((q) => q.slice(1)), 1600 + cur.text.length * 25);
+    return () => clearTimeout(id);
+  }, [cur, shown]);
+  const next = () => (cur && shown < cur.text.length ? setShown(cur.text.length) : setQueue((q) => q.slice(1)));
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'Enter' && !s.activity && !s.shift?.dilemma) next();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  return (
+    <>
+      <div className="toasts">{toasts.map((t) => <div key={t.id} className="toast">{t.text}</div>)}</div>
+      {cur && !s.activity && !s.shift?.dilemma && (
+        <div className="dialogue" onClick={next}>
+          <div className="nameplate">{cur.who}</div>
+          <div className="dialogue-text">{cur.text.slice(0, shown)}</div>
+          {shown >= cur.text.length && <div className="more">▼</div>}
+        </div>
+      )}
+    </>
   );
 }
 
