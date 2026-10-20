@@ -8,7 +8,7 @@ import { StreetScene, streetLayout } from './StreetScene';
 export function PhaserView({ scene }: { scene: 'street' | 'store' }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const size = scene === 'street' && streetLayout().bg ? { w: 480, h: 270 } : { w: 320, h: 192 };
+    const size = scene === 'street' ? streetLayout().view : { w: 320, h: 192 };
     const game = new Phaser.Game({
       type: Phaser.AUTO,
       parent: ref.current!,

@@ -31,7 +31,7 @@ export function App() {
             <Confirm />
           </div>
           <div className="bar bottom">
-            <div className="muted">← 왼쪽으로 걸어가면 편의점. 출근 시간은 17:30. · 이동 ←→↑↓/WASD · 들어가기 E/Space</div>
+            <div className="muted">초록 간판 편의점 문 앞에서 E — 출근 17:30 · 집·PC방으로 새도 된다 · 이동 ←→↑↓/WASD</div>
           </div>
         </div>
       );
