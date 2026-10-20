@@ -180,6 +180,13 @@ export interface ShiftReport {
   fired: boolean;
 }
 
+/** 어른이 아이를 부르는 이름: 성 빼고, 받침 있으면 '이' (유준 → 유준이, 서아 → 서아) */
+function callName(full: string): string {
+  const given = full.length >= 3 ? full.slice(1) : full;
+  const code = given.charCodeAt(given.length - 1) - 0xac00;
+  return code >= 0 && code < 11172 && code % 28 !== 0 ? `${given}이` : given;
+}
+
 const KIND_LABEL: Record<CustomerKind, string> = {
   student: '교복 입은 학생', worker: '퇴근하는 직장인', elder: '동네 어르신', drunk: '술 취한 아저씨', rude: '반말하는 손님', rider: '배달 기사님', regular: '단골',
 };
@@ -497,7 +504,7 @@ export class ConvenienceShift {
       friend: ['야 ㅋㅋ 너 여기서 일하냐?', '오 사장님 ㅋㅋ'],
       classmate: ['어? 너 여기서 알바해?', '(눈이 마주쳤다. 어색하게 고개를 끄덕였다.)'],
       bully: ['어~ 알바생? ㅋㅋ', '(친구들이랑 들어오며 웃는다.)'],
-      parentFriend: ['어머, 너 OO이 아니니? 여기서 일해?', '엄마는 아시니?'],
+      parentFriend: [`어머, 너 ${callName(this.worker.name)} 아니니? 여기서 일해?`, '엄마는 아시니?'],
       teacher: ['…너 여기서 알바하냐? 학교에 신고는 했고?', '(선생님이 컵라면을 들고 서 있다.)'],
       acquaintance: ['어, 안녕.', '(아는 얼굴이다.)'],
     };
