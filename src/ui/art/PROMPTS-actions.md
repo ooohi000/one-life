@@ -9,7 +9,9 @@
 
 몸 기준 (docs/art-ref/character/CHARACTER-SYSTEM.md):
 - 머리카락·눈·코·입·눈썹 **없음** (머리·얼굴은 따로 얹는다)
-- 마네킹처럼 매끈하고 해부학 디테일 없는 몸. 고등학생이라 **몸에 붙는 기본 속옷(민소매·반바지)** 을 입힌다 — 옷 층이 그 위에 덮인다
+- **피부색 마네킹 몸 (전신슈트)**: 인형처럼 매끈하고 해부학 디테일 없는 피부색 몸. 속옷도 안 입힌다 — 옷은 전부 층으로 덮는다
+  (기준 그림: `docs/art-ref/character/BASE-BODY-REFERENCE.png`, `docs/art-ref/character/body-suit-sheet.png`)
+- 게임 화면엔 윗옷·바지가 갖춰져야만 나온다 (빠지면 기존 그림으로 — 코드가 막는다)
 - 4방향 모두 키·발 위치가 같아야 한다. 왼쪽·오른쪽은 진짜 반대 방향
 
 ---
@@ -20,8 +22,9 @@ High-quality pixel art in the style of Witchbrook and Stardew Valley: crisp clea
 A base body sprite for a game character creator. 1 row x 4 columns, all frames exactly the same size, on a transparent background
 (if transparency is not possible, a plain flat white background). Each frame is a 32 x 64 pixel grid with clearly visible square pixels.
 Columns: facing down (front), facing left, facing right, facing up (back view). Standing still, arms relaxed at the sides.
-Character: a Korean teenage boy of average build, about 3 heads tall (cute but not baby-like), smooth mannequin-like body with no anatomical detail,
-wearing only a plain fitted light gray sleeveless undershirt and plain gray knee-length shorts, barefoot.
+Character: a Korean teenage boy of average build, about 3 heads tall (cute but not baby-like), drawn as a smooth skin-colored mannequin
+like a body suit or a doll: no clothes, no underwear, no anatomical detail at all, no nipples, no navel, simple rounded hands and feet.
+Use ONE skin color with stepped shading and a dark outline (the game recolors the skin), matching the attached reference style if one is attached.
 Smooth bald head and a blank face with no eyes, nose, mouth or eyebrows (hair and face are separate layers).
 Same height and the same feet position in all 4 frames; the left and right views face opposite directions.
 No text, no labels, no grid lines, no shadow on the ground.
@@ -38,7 +41,7 @@ Same pose, same proportions, same feet position in all 4 frames. No text, no gri
 ## 0-C. 옷 층 시험 — 티셔츠 1벌 (확정된 몸 첨부)
 ```
 Same character, same pose, same frame size and exactly the same position in every frame as the attached sprite sheet.
-Change only one thing: he now wears a plain gray crew-neck short-sleeve t-shirt over the undershirt.
+Change only one thing: he now wears a plain gray crew-neck short-sleeve t-shirt.
 Do not move, resize or redraw the body, head, arms or legs — every pixel outside the t-shirt must stay identical.
 1 row x 4 columns: facing down, facing left, facing right, facing up (back). Transparent background (or plain flat white). No text, no grid lines.
 ```
