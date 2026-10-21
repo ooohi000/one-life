@@ -26,7 +26,8 @@
     "sim:shift": "tsx src/sim/shift-demo.ts",
     "sim:seasons": "tsx src/sim/seasons.ts",
     "sim:carry": "tsx src/sim/carry-demo.ts",
-    "sim:bodygen": "tsx src/sim/body-preview.ts saves/body-preview.png"
+    "sim:bodygen": "tsx src/sim/body-preview.ts saves/body-preview.png",
+    "sim:layers": "tsx tools/bodygen-layers.ts"
   },
   "keywords": [],
   "author": "",

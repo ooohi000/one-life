@@ -1,23 +1,75 @@
 # 동작 프롬프트 모음 (GPT에 그대로 붙여 넣기)
 
-## 쓰는 법
-1. **0번(기준 몸 걷기)을 먼저** 받는다. 첨부 없이.
-2. 0번이 마음에 들면, **1번부터는 매번 0번 그림을 첨부**하고 프롬프트를 붙여 넣는다. (그래야 같은 사람·같은 크기로 나온다)
-3. 한 번에 한 동작씩. 결과가 뭉개지면 그 동작만 다시.
-4. 받은 그림은 대화에 첨부하면서 번호만 말해 주면 된다 ("3번 서 있기").
+## 쓰는 법 (2026-10-21 바뀜 — 조립형 캐릭터)
+1. **0번은 정지 4방향만** 받는다. 해상도(32×64 / 64×128)를 정하기 전엔 걷기·동작을 받지 않는다.
+2. 0-A(32×64 후보)·0-B(64×128 후보)를 받아 `?view=sprite-test`에서 배경 옆에 세워 보고 해상도를 정한다.
+3. 정한 해상도의 몸이 확정되면 0-C(티셔츠 1벌)로 **옷 층 맞추기 시험**부터 한다. 옷 100벌 전에 1벌로.
+4. 그다음에 걷기(0-D) → 1단계 동작. 매번 확정된 몸 그림을 첨부한다.
+5. 받은 그림은 대화에 첨부하면서 번호만 말해 주면 된다 ("0-A").
+
+몸 기준 (docs/art-ref/character/CHARACTER-SYSTEM.md):
+- 머리카락·눈·코·입·눈썹 **없음** (머리·얼굴은 따로 얹는다)
+- 마네킹처럼 매끈하고 해부학 디테일 없는 몸. 고등학생이라 **몸에 붙는 기본 속옷(민소매·반바지)** 을 입힌다 — 옷 층이 그 위에 덮인다
+- 4방향 모두 키·발 위치가 같아야 한다. 왼쪽·오른쪽은 진짜 반대 방향
 
 ---
 
-## 0. 기준 몸 — 걷기 (첨부 없음)
+## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부 없음)
 ```
-High-quality pixel art in the style of Witchbrook and Stardew Valley: crisp clean pixels, no blur, soft shading, warm palette.
-A character sprite sheet for a game character creator, plain white background, 4 rows x 4 columns, every frame the same size,
-character centered in each frame, about 3 heads tall (cute but not baby-like).
+High-quality pixel art in the style of Witchbrook and Stardew Valley: crisp clean pixels, no blur, no anti-aliasing, soft stepped shading, warm palette.
+A base body sprite for a game character creator. 1 row x 4 columns, all frames exactly the same size, on a transparent background
+(if transparency is not possible, a plain flat white background). Each frame is a 32 x 64 pixel grid with clearly visible square pixels.
+Columns: facing down (front), facing left, facing right, facing up (back view). Standing still, arms relaxed at the sides.
+Character: a Korean teenage boy of average build, about 3 heads tall (cute but not baby-like), smooth mannequin-like body with no anatomical detail,
+wearing only a plain fitted light gray sleeveless undershirt and plain gray knee-length shorts, barefoot.
+Smooth bald head and a blank face with no eyes, nose, mouth or eyebrows (hair and face are separate layers).
+Same height and the same feet position in all 4 frames; the left and right views face opposite directions.
+No text, no labels, no grid lines, no shadow on the ground.
+```
+
+## 0-B. 같은 몸 — 정지 4방향, 64×128 후보 (0-A 그림 첨부)
+```
+Same character, same design, same pixel art style as the attached image, redrawn at double resolution:
+each frame is a 64 x 128 pixel grid with clearly visible square pixels, with finer shading and outline detail (not just enlarged).
+1 row x 4 columns: facing down, facing left, facing right, facing up (back). Transparent background (or plain flat white).
+Same pose, same proportions, same feet position in all 4 frames. No text, no grid lines, no shadow.
+```
+
+## 0-C. 옷 층 시험 — 티셔츠 1벌 (확정된 몸 첨부)
+```
+Same character, same pose, same frame size and exactly the same position in every frame as the attached sprite sheet.
+Change only one thing: he now wears a plain gray crew-neck short-sleeve t-shirt over the undershirt.
+Do not move, resize or redraw the body, head, arms or legs — every pixel outside the t-shirt must stay identical.
+1 row x 4 columns: facing down, facing left, facing right, facing up (back). Transparent background (or plain flat white). No text, no grid lines.
+```
+→ 코드가 몸 그림과 비교해서 티셔츠 도트만 뽑는다 (`tools/extract-layer.py`). 같은 시험을 코드로 그린 옷(bodygen)으로도 해서 둘을 비교한다.
+
+## 0-D. 걷기 — 해상도 확정 뒤에만 (확정된 몸 첨부)
+```
+Same character, same pixel art style, same proportions and same frame size as the attached sprite sheet.
+New sprite sheet: WALKING. 4 rows x 4 columns, every frame the same size, character centered in each frame.
 Rows: facing down, facing left, facing right, facing up (back view). Columns: standing, left foot forward, standing, right foot forward.
-Character: a Korean teenage boy of average build, plain light gray fitted short-sleeve t-shirt, plain gray shorts,
-gray socks, simple dark shoes. Smooth bald head and a blank face with no features (hair and faces are separate layers).
-Keep the body identical in all 16 frames. No text, no grid lines.
+Keep the body identical to the attached sheet; feet on the same baseline in every frame. Transparent background (or plain flat white). No text, no grid lines.
 ```
+
+## 정리 명령 (코드가 한다)
+```
+# 몸 (키를 정해서 — 안 정하면 칸에 꽉 차서 아이·어른 키가 같아진다. 배율은 저장해 둔다)
+python3 tools/pixelize.py 0-A.png src/ui/art/chars/lab/res32/body/m-teen-average/idle.png --sheet 4x1 --frame 32x64 --height 56 --foot-pad 1 --tol 90 --colors 40 --save-transform docs/art-src/t-res32-idle.json
+python3 tools/pixelize.py 0-B.png src/ui/art/chars/lab/res64/body/m-teen-average/idle.png --sheet 4x1 --frame 64x128 --height 112 --foot-pad 2 --tol 90 --colors 48 --save-transform docs/art-src/t-res64-idle.json
+python3 tools/sprite-qa.py <몸>.png --layout idle --frame 32x64          # 크기·투명·잘림·발바닥·좌우·키 검사
+
+# 옷 층 시험 (0-C): 몸과 같은 배율로 줄이고 → 달라진 도트만 뽑고 → 몸 밖으로 새는지 검사
+python3 tools/pixelize.py 0-C.png /tmp/clothed.png --sheet 4x1 --frame 32x64 --foot-pad 1 --tol 90 --colors 40 --use-transform docs/art-src/t-res32-idle.json
+python3 tools/extract-layer.py <몸>.png /tmp/clothed.png src/ui/art/chars/lab/res32/top/gray-tshirt/idle.png --layout idle [--align]
+python3 tools/sprite-qa.py src/ui/art/chars/lab/res32/top/gray-tshirt/idle.png --layout idle --base <몸>.png
+```
+코드로 그린 비교 대상(bodygen 방식)은 `npm run sim:layers` → `chars/lab/bodygen/`.
+확정되면 게임용 위치 `src/ui/art/chars/layers/<층>/<id>/<동작>.png` 로 옮긴다 (윗옷·바지까지 있어야 주인공이 조립형으로 바뀐다).
+
+---
+
+> 아래 1~19번은 **해상도와 몸이 확정된 뒤**에 쓴다. "attached sprite sheet" = 확정된 걷기 시트.
 
 ---
 

@@ -40,7 +40,8 @@ export class Walker {
       return c;
     });
     this.shadow = scene.add.image(x, y, sk).setOrigin(0.5, 0.5);
-    if (sheet && hasArt(sheet) && scene.textures.exists(sheet)) this.sheet = sheet;
+    // 그림 파일 시트(hasArt) 또는 조립해서 만든 시트('char:…')
+    if (sheet && (hasArt(sheet) || sheet.startsWith('char:')) && scene.textures.exists(sheet)) this.sheet = sheet;
     if (this.sheet) {
       const k = sheetFrames(scene, this.sheet);
       this.img = scene.add.image(x, y, this.sheet, '0').setOrigin(0.5, 1).setScale(k);

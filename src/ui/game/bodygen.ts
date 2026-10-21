@@ -390,6 +390,50 @@ export function sheet(p: BodyParams, o: Outfit, face = true): Uint8ClampedArray 
   return out;
 }
 
+// ───────── 층 나누기 (조립형 캐릭터 시험용) ─────────
+
+export type GenLayer = 'body' | 'top' | 'bottom' | 'shoes';
+
+/**
+ * 한 층만 뽑는다. 몸·옷이 같은 부위 지도(shape)에서 나오니 칸·발바닥이 1도트도 안 어긋난다.
+ * body = 피부색 마네킹 (얼굴·머리 없음), 나머지 = 그 옷이 덮는 부위만.
+ */
+export function paintLayer(p: BodyParams, o: Outfit, layer: GenLayer, view: View, frame: 0 | 1 | 2 | 3): Uint8ClampedArray {
+  if (layer === 'body') {
+    const skin: Outfit = { skin: o.skin, top: o.skin, sleeves: 'none', bottom: o.skin, bottomLen: 'short', shoes: o.skin };
+    return paint(p, skin, view, frame, false);
+  }
+  const full = paint(p, o, view, frame, false);
+  const v = view === 'left' ? 'right' : view;
+  const buf = shape(p, v, frame);
+  const s = measure(p);
+  const top = FRAME_H - 1.5 - s.H;
+  const waistY = top + s.head * 1.12 + s.head * 0.95; // 이 위는 윗옷, 아래는 바지
+  const keep = (r: number, y: number) => {
+    if (layer === 'shoes') return r === R.Foot || r === R.FarFoot;
+    if (layer === 'top') {
+      if (r === R.Torso) return y + 0.5 < waistY;
+      if (r === R.ArmUpper || r === R.FarArmUpper) return o.sleeves !== 'none';
+      if (r === R.ArmLower || r === R.FarArmLower) return o.sleeves === 'long';
+      return false;
+    }
+    if (r === R.Torso) return y + 0.5 >= waistY;
+    if (r === R.LegUpper || r === R.FarLegUpper) return true;
+    if (r === R.LegLower || r === R.FarLegLower) return o.bottomLen === 'long';
+    return false;
+  };
+  const out = new Uint8ClampedArray(full.length);
+  for (let y = 0; y < FRAME_H; y++) {
+    for (let x = 0; x < FRAME_W; x++) {
+      const sx = view === 'left' ? FRAME_W - 1 - x : x;
+      if (!keep(buf[y * FRAME_W + sx]!, y)) continue;
+      const i = (y * FRAME_W + x) * 4;
+      out.set(full.subarray(i, i + 4), i);
+    }
+  }
+  return out;
+}
+
 /** 엔진의 몸 상태 → 그림 매개변수 */
 export function paramsFromBody(sex: Sex, age: number, musclePct: number, fatPct: number): BodyParams {
   // 근육률 30~45% → 0~1, 체지방 8~40% → 0~1 (대략)

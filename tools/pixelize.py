@@ -18,6 +18,7 @@ AI 그림은 '도트처럼 보이는 큰 그림'이라 픽셀 크기가 들쭉�
       --names kimbap,dosirak,ramen,sandwich,cola,coffee,water,energy,chips,icecream,gum,cigarette,soju,beer,umbrella,battery
 """
 import argparse
+import json
 import os
 from PIL import Image
 
@@ -129,6 +130,10 @@ def main():
     ap.add_argument('--names', help='잘린 칸 이름 (쉼표)')
     ap.add_argument('--sheet', help='CxR 캐릭터 시트 → 한 장 (칸마다 발을 바닥에, 머리를 가운데에 맞춤)')
     ap.add_argument('--frame', default='16x32', help='시트 한 칸 크기')
+    ap.add_argument('--height', type=int, help='캐릭터 키(도트). 없으면 칸 높이-1에 꽉 채움 — 체형·나이 키 차이를 살리려면 꼭 지정')
+    ap.add_argument('--foot-pad', type=int, default=0, help='발바닥 아래 여백(도트). 모든 층이 같아야 한다')
+    ap.add_argument('--save-transform', help='이 시트에 쓴 배율·칸 위치를 json으로 저장 (몸 그림 처리할 때)')
+    ap.add_argument('--use-transform', help='저장한 배율·칸 위치를 그대로 쓴다 (같은 몸의 옷 입은 그림 처리할 때 — 층이 안 어긋나게)')
     a = ap.parse_args()
     img = Image.open(a.src).convert('RGBA')
     if not a.keep_bg:
@@ -144,20 +149,35 @@ def main():
                 cell = img.crop((int(c * cw), int(r * ch), int((c + 1) * cw), int((r + 1) * ch)))
                 box = cell.getbbox()
                 cells.append((cell, box))
-        # 모든 칸에 같은 배율 (키가 프레임마다 달라지지 않게) — 제일 큰 키가 프레임 높이-1
-        tallest = max(b[3] - b[1] for _, b in cells if b)
-        k = (fh - 1) / tallest
+        # 모든 칸에 같은 배율 (키가 프레임마다 달라지지 않게)
+        body_h = a.height or (fh - 1 - a.foot_pad)
+        if a.use_transform:
+            t = json.load(open(a.use_transform))
+            k, anchors = t['k'], t['anchors']
+        else:
+            tallest = max(b[3] - b[1] for _, b in cells if b)
+            k = body_h / tallest
+            anchors = []
+            for cell, box in cells:
+                if not box:
+                    anchors.append(None)
+                    continue
+                # 머리(위쪽 30%)의 가로 가운데를 기준으로 — 걸음에 다리가 벌어져도 몸이 흔들리지 않게
+                head = cell.crop((box[0], box[1], box[2], box[1] + int((box[3] - box[1]) * 0.3))).getbbox()
+                hx = box[0] + (head[0] + head[2]) / 2 if head else (box[0] + box[2]) / 2
+                anchors.append([hx, box[3]])
+        if a.save_transform:
+            json.dump({'k': k, 'anchors': anchors, 'frame': [fw, fh], 'foot_pad': a.foot_pad}, open(a.save_transform, 'w'))
         sheet = Image.new('RGBA', (fw * cols, fh * rows))
+        avail = fh - a.foot_pad
         for i, (cell, box) in enumerate(cells):
-            if not box:
+            if not box or not anchors[i]:
                 continue
-            # 머리(위쪽 30%)의 가로 가운데를 기준으로 — 걸음에 다리가 벌어져도 몸이 흔들리지 않게
-            head = cell.crop((box[0], box[1], box[2], box[1] + int((box[3] - box[1]) * 0.3))).getbbox()
-            hx = box[0] + (head[0] + head[2]) / 2 if head else (box[0] + box[2]) / 2
+            hx, bottom = anchors[i]
             sw = int(fw / k)
-            src = cell.crop((int(hx - sw / 2), box[3] - int((fh - 1) / k), int(hx - sw / 2) + sw, box[3]))
-            small = strip_halo(down_mode(src, fw, fh - 1, a.colors))
-            sheet.paste(small, ((i % cols) * fw, (i // cols) * fh + 1))
+            src = cell.crop((int(hx - sw / 2), bottom - int(avail / k), int(hx - sw / 2) + sw, bottom))
+            small = strip_halo(down_mode(src, fw, avail, a.colors))
+            sheet.paste(small, ((i % cols) * fw, (i // cols) * fh))
         out = quantize(sheet, a.colors)
         os.makedirs(os.path.dirname(a.dst) or '.', exist_ok=True)
         out.save(a.dst)

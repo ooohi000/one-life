@@ -9,6 +9,7 @@ import { session } from '../session';
 import { axis, bubble, FONT, hex, makeKeys, TEXT_RES, Walker } from './common';
 import { hasArt, pickArt, preloadArt, ZOOM } from './art';
 import { lookFor, type Look } from './pixel';
+import { playerSheet } from './character';
 
 
 
@@ -150,7 +151,7 @@ export class StoreScene extends Phaser.Scene {
       skin: '#f1c9a5', hair: '#1d1a1a', top: '#f2f2f2', bottom: '#2a3550', shoes: '#222',
       outfit: Math.min(this.outfit, 1) as Look['outfit'], vest: '#2f7d4f', hairLen: 0,
     };
-    this.me = new Walker(this, look, SL.station.pos.x, SL.station.pos.y, ['chars/player_work', 'chars/player_school'].find(hasArt));
+    this.me = new Walker(this, look, SL.station.pos.x, SL.station.pos.y, playerSheet(this, look, [['chars/player_work', 'chars/player_school'].find(hasArt)], { work: true }));
     this.keys = makeKeys(this);
     this.marks = this.add.graphics().setDepth(9_000);
     this.hint = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: '#ffffff', backgroundColor: '#1b1b1bcc', padding: { x: 2, y: 1 } }).setOrigin(0.5, 1).setDepth(9_500);

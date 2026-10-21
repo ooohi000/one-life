@@ -9,6 +9,7 @@ import { axis, ensureTexture, FONT, makeKeys, TEXT_RES, Walker } from './common'
 import { sfx } from '../sound';
 import { hasArt, pickArt, preloadArt, ZOOM } from './art';
 import { lookFor, type Look } from './pixel';
+import { playerSheet } from './character';
 
 const W = 780;
 const H = 192;
@@ -186,7 +187,8 @@ export class StreetScene extends Phaser.Scene {
     const look: Look = { skin: '#f1c9a5', hair: '#1d1a1a', top: today.outfit >= 3 ? '#1f2d4a' : '#f2f2f2', bottom: '#2a3550', shoes: '#222', outfit: today.outfit, backpack: '#2b2b2b' };
     if (today.outfit === 4) look.top = '#1b1b1b';
     // 날씨에 맞는 옷 그림이 아직 없으면 교복 그림으로
-    const sheet = [today.outfit === 0 ? 'chars/player_summer' : today.outfit <= 2 ? 'chars/player_school' : 'chars/player_winter', 'chars/player_school'].find(hasArt);
+    // 조립형 그림(chars/layers/…)이 있으면 그걸로, 없으면 기존 통짜 시트
+    const sheet = playerSheet(this, look, [[today.outfit === 0 ? 'chars/player_summer' : today.outfit <= 2 ? 'chars/player_school' : 'chars/player_winter', 'chars/player_school'].find(hasArt)]);
     this.me = new Walker(this, look, L.start.x, L.start.y, sheet);
     this.me.dir = 'left';
     if (L.follow) {
