@@ -16,11 +16,11 @@
 
 ---
 
-## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부 없음)
+## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부: docs/art-ref/character/body-suit-sheet.png — "남자 - 기본 체형" 줄이 기준)
 ```
 High-quality pixel art in the style of Witchbrook and Stardew Valley: crisp clean pixels, no blur, no anti-aliasing, soft stepped shading, warm palette.
-A base body sprite for a game character creator. 1 row x 4 columns, all frames exactly the same size, on a transparent background
-(if transparency is not possible, a plain flat white background). Each frame is a 32 x 64 pixel grid with clearly visible square pixels.
+A base body sprite for a game character creator. 1 row x 4 columns, all frames exactly the same size, on a plain flat pure white background
+(NOT a checkerboard pattern — the game removes the white itself). Each frame is a 32 x 64 pixel grid with clearly visible square pixels.
 Columns: facing down (front), facing left, facing right, facing up (back view). Standing still, arms relaxed at the sides.
 Character: a Korean teenage boy of average build, about 3 heads tall (cute but not baby-like), drawn as a smooth skin-colored mannequin
 like a body suit or a doll: no clothes, no underwear, no anatomical detail at all, no nipples, no navel, simple rounded hands and feet.
@@ -28,13 +28,14 @@ Use ONE skin color with stepped shading and a dark outline (the game recolors th
 Smooth bald head and a blank face with no eyes, nose, mouth or eyebrows (hair and face are separate layers).
 Same height and the same feet position in all 4 frames; the left and right views face opposite directions.
 No text, no labels, no grid lines, no shadow on the ground.
+Only this one character — do not draw other body types, labels or guide lines from the attached reference.
 ```
 
 ## 0-B. 같은 몸 — 정지 4방향, 64×128 후보 (0-A 그림 첨부)
 ```
 Same character, same design, same pixel art style as the attached image, redrawn at double resolution:
 each frame is a 64 x 128 pixel grid with clearly visible square pixels, with finer shading and outline detail (not just enlarged).
-1 row x 4 columns: facing down, facing left, facing right, facing up (back). Transparent background (or plain flat white).
+1 row x 4 columns: facing down, facing left, facing right, facing up (back). Plain flat pure white background, NOT a checkerboard.
 Same pose, same proportions, same feet position in all 4 frames. No text, no grid lines, no shadow.
 ```
 
@@ -43,7 +44,7 @@ Same pose, same proportions, same feet position in all 4 frames. No text, no gri
 Same character, same pose, same frame size and exactly the same position in every frame as the attached sprite sheet.
 Change only one thing: he now wears a plain gray crew-neck short-sleeve t-shirt.
 Do not move, resize or redraw the body, head, arms or legs — every pixel outside the t-shirt must stay identical.
-1 row x 4 columns: facing down, facing left, facing right, facing up (back). Transparent background (or plain flat white). No text, no grid lines.
+1 row x 4 columns: facing down, facing left, facing right, facing up (back). Plain flat pure white background, NOT a checkerboard. No text, no grid lines.
 ```
 → 코드가 몸 그림과 비교해서 티셔츠 도트만 뽑는다 (`tools/extract-layer.py`). 같은 시험을 코드로 그린 옷(bodygen)으로도 해서 둘을 비교한다.
 
@@ -52,7 +53,7 @@ Do not move, resize or redraw the body, head, arms or legs — every pixel outsi
 Same character, same pixel art style, same proportions and same frame size as the attached sprite sheet.
 New sprite sheet: WALKING. 4 rows x 4 columns, every frame the same size, character centered in each frame.
 Rows: facing down, facing left, facing right, facing up (back view). Columns: standing, left foot forward, standing, right foot forward.
-Keep the body identical to the attached sheet; feet on the same baseline in every frame. Transparent background (or plain flat white). No text, no grid lines.
+Keep the body identical to the attached sheet; feet on the same baseline in every frame. Plain flat pure white background, NOT a checkerboard. No text, no grid lines.
 ```
 
 ## 정리 명령 (코드가 한다)
