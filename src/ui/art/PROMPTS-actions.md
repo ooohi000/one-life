@@ -9,7 +9,7 @@
 
 몸 기준 (docs/art-ref/character/CHARACTER-SYSTEM.md):
 - 머리카락·눈·코·입·눈썹 **없음** (머리·얼굴은 따로 얹는다)
-- **회색 마네킹 (성인 남자 몸)**: 매끈한 회색 점토 인형·상점 마네킹 같은 몸. 고등학생도 이 몸을 쓴다. 피부색은 코드가 입힌다. 옷은 전부 층으로 덮는다
+- **살구색 마네킹 (성인 남자 몸)**: 매끈한 인형·상점 마네킹 같은 몸. 고등학생도 이 몸을 쓴다. 옷은 전부 층으로 덮는다
   (기준 그림: `docs/art-ref/character/BASE-BODY-REFERENCE.png`, `docs/art-ref/character/body-suit-sheet.png`)
 - 게임 화면엔 윗옷·바지가 갖춰져야만 나온다 (빠지면 기존 그림으로 — 코드가 막는다)
 - 4방향 모두 키·발 위치가 같아야 한다. 왼쪽·오른쪽은 진짜 반대 방향
@@ -18,15 +18,14 @@
 ---
 
 ## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부 없음)
-> 2026-10-21 GPT 거부 두 번 → 바꾼 것: **성인 남자 몸**(고등학생도 이 몸을 쓴다), **회색 마네킹**(피부색 몸은 맨몸으로 읽힌다).
-> 피부색은 코드가 회색 명암 위에 입힌다 (`character/skin.ts`). 나이·학년 단어는 넣지 않는다.
+> 2026-10-21 GPT 거부 두 번 → **성인 남자 몸**으로 (고등학생도 이 몸을 쓴다). 나이·학년 단어는 넣지 않는다. 몸 색은 살구색 그대로.
 ```
 High-quality handcrafted pixel art for a life simulation RPG, in the visual language of Witchbrook and Stardew Valley:
 crisp pixel edges, clean one-pixel dark outlines, carefully controlled stepped shading.
 
-Create a four-direction sprite sheet of ONE light gray display mannequin used as a base for a game's clothing system,
-like a smooth gray clay figure or a store display mannequin. Adult man, average build, about three heads tall.
-Matte light gray all over, one gray color family with stepped shading. Simple rounded hands and feet. Bald blank head with no face.
+Create a four-direction sprite sheet of ONE smooth peach-colored mannequin figure used as a base for a game's clothing system,
+like a vinyl toy figure or a store display mannequin. Adult man, average build, about three heads tall.
+One peach color family with stepped shading. Simple rounded hands and feet. Bald blank head with no face.
 
 Sprite sheet layout:
 - One row, four columns: front (facing down), left profile (facing left), right profile (facing right), back (facing up).
@@ -40,7 +39,7 @@ Sprite sheet layout:
 
 ## 0-B. 같은 몸 — 정지 4방향, 64×128 후보 (0-A 그림 첨부)
 ```
-Using the approved 0-A gray mannequin as the sole design reference, recreate the same four-direction mannequin at a target native
+Using the approved 0-A mannequin as the sole design reference, recreate the same four-direction mannequin at a target native
 resolution of 64 x 128 pixels per frame.
 
 Maintain exactly the same silhouette, proportions, direction order, pose, color palette, and baseline. Add carefully controlled
