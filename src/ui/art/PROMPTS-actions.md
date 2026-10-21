@@ -9,44 +9,69 @@
 
 몸 기준 (docs/art-ref/character/CHARACTER-SYSTEM.md):
 - 머리카락·눈·코·입·눈썹 **없음** (머리·얼굴은 따로 얹는다)
-- **피부색 마네킹 몸 (전신슈트)**: 인형처럼 매끈하고 해부학 디테일 없는 피부색 몸. 속옷도 안 입힌다 — 옷은 전부 층으로 덮는다
+- **피부색 전신 바디슈트를 입은 마네킹**: 봉제선·목둘레·소매·허리밴드 없이 매끈한 인형. 실제 피부·해부학 묘사 없음 — 옷은 전부 층으로 덮는다
   (기준 그림: `docs/art-ref/character/BASE-BODY-REFERENCE.png`, `docs/art-ref/character/body-suit-sheet.png`)
 - 게임 화면엔 윗옷·바지가 갖춰져야만 나온다 (빠지면 기존 그림으로 — 코드가 막는다)
 - 4방향 모두 키·발 위치가 같아야 한다. 왼쪽·오른쪽은 진짜 반대 방향
+- GPT 그림은 원본 시안일 뿐 — `pixelize.py`로 규격 맞추고 `sprite-qa.py` 통과 + `?view=sprite-test` 확인 뒤 확정
 
 ---
 
 ## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부: docs/art-ref/character/body-suit-sheet.png — "남자 - 기본 체형" 줄이 기준)
+> GPT 이미지 거부 피해서 고친 문구 (2026-10-21): "맨몸·속옷 없음" 대신 "피부색 불투명 바디슈트를 입은 인형"으로 쓴다.
 ```
-High-quality pixel art in the style of Witchbrook and Stardew Valley: crisp clean pixels, no blur, no anti-aliasing, soft stepped shading, warm palette.
-A base body sprite for a game character creator. 1 row x 4 columns, all frames exactly the same size, on a plain flat pure white background
-(NOT a checkerboard pattern — the game removes the white itself). Each frame is a 32 x 64 pixel grid with clearly visible square pixels.
-Columns: facing down (front), facing left, facing right, facing up (back view). Standing still, arms relaxed at the sides.
-Character: a Korean teenage boy of average build, about 3 heads tall (cute but not baby-like), drawn as a smooth skin-colored mannequin
-like a body suit or a doll: no clothes, no underwear, no anatomical detail at all, no nipples, no navel, simple rounded hands and feet.
-Use ONE skin color with stepped shading and a dark outline (the game recolors the skin), matching the attached reference style if one is attached.
-Smooth bald head and a blank face with no eyes, nose, mouth or eyebrows (hair and face are separate layers).
-Same height and the same feet position in all 4 frames; the left and right views face opposite directions.
-No text, no labels, no grid lines, no shadow on the ground.
-Only this one character — do not draw other body types, labels or guide lines from the attached reference.
+High-quality handcrafted pixel art for a Korean life simulation RPG, with crisp pixel edges, a cohesive warm palette,
+clean one-pixel outlines at native sprite resolution, and carefully controlled stepped shading.
+
+Create a four-direction sprite sheet of ONE stylized, faceless humanoid character-customization mannequin,
+matching the proportions and visual language of the attached reference (use the male average-build row as the model).
+
+The character is an approximately three-head-tall game mannequin with an average male build, wearing an opaque peach-colored
+full-body bodysuit, including integrated hands and feet. Its surface is smooth and seamless, with no visible garment seams,
+zippers, cuffs, neckline, waistband, or separate clothing pieces. It is a fully covered stylized doll, not an anatomical human figure.
+Use one peach color family with stepped shading and a dark outline.
+
+The head is bald and completely blank, without eyes, eyebrows, nose, mouth, or hair. The silhouette is compact and balanced,
+with rounded hands and feet.
+
+Sprite sheet layout:
+- One row, four columns.
+- Column 1: front / facing down.
+- Column 2: left profile / facing left.
+- Column 3: right profile / facing right.
+- Column 4: back / facing up.
+- Identical character proportions, height, ground baseline, and consistent shading in all four directions.
+- Relaxed standing pose, arms at the sides.
+- Each target frame is 32 x 64 pixels. Target final sprite sheet dimensions: 128 x 64 pixels.
+- Pure white (#FFFFFF) flat background if genuine alpha transparency cannot be produced.
+- No checkerboard background.
+- No labels, captions, grid lines, guides, shadows, or additional characters.
+
+The reference image is a design guide only. Do not reproduce its multiple body types, Korean labels, panels, or layout.
 ```
 
 ## 0-B. 같은 몸 — 정지 4방향, 64×128 후보 (0-A 그림 첨부)
 ```
-Same character, same design, same pixel art style as the attached image, redrawn at double resolution:
-each frame is a 64 x 128 pixel grid with clearly visible square pixels, with finer shading and outline detail (not just enlarged).
-1 row x 4 columns: facing down, facing left, facing right, facing up (back). Plain flat pure white background, NOT a checkerboard.
-Same pose, same proportions, same feet position in all 4 frames. No text, no grid lines, no shadow.
+Using the approved 0-A character as the sole design reference, recreate the same four-direction mannequin at a target native
+resolution of 64 x 128 pixels per frame.
+
+Maintain exactly the same silhouette, proportions, direction order, pose, color palette, and baseline. Add carefully controlled
+pixel-level shading detail appropriate for the higher resolution, rather than simply enlarging the 32 x 64 version.
+
+One row, four columns. Target full sheet: 256 x 128 pixels.
+
+Pure white background or genuine alpha transparency. No checkerboard, labels, guides, or additional characters.
 ```
 
 ## 0-C. 옷 층 시험 — 티셔츠 1벌 (확정된 몸 첨부)
 ```
-Same character, same pose, same frame size and exactly the same position in every frame as the attached sprite sheet.
-Change only one thing: he now wears a plain gray crew-neck short-sleeve t-shirt.
+Same mannequin, same pose, same frame size and exactly the same position in every frame as the attached sprite sheet.
+Change only one thing: it now wears a plain gray crew-neck short-sleeve t-shirt over the peach bodysuit.
 Do not move, resize or redraw the body, head, arms or legs — every pixel outside the t-shirt must stay identical.
-1 row x 4 columns: facing down, facing left, facing right, facing up (back). Plain flat pure white background, NOT a checkerboard. No text, no grid lines.
+One row, four columns: front, left, right, back. Pure white (#FFFFFF) flat background, no checkerboard. No labels, no grid lines.
 ```
 → 코드가 몸 그림과 비교해서 티셔츠 도트만 뽑는다 (`tools/extract-layer.py`). 같은 시험을 코드로 그린 옷(bodygen)으로도 해서 둘을 비교한다.
+→ **옷 색은 피부(살구) 계열을 피한다** — 몸과 구분이 안 돼서 추출이 안 되고, 섞여 들어간 살구색 도트는 피부색을 바꿔도 안 바뀌어 얼룩이 된다.
 
 ## 0-D. 걷기 — 해상도 확정 뒤에만 (확정된 몸 첨부)
 ```

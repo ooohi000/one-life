@@ -154,6 +154,7 @@ def main():
         if a.use_transform:
             t = json.load(open(a.use_transform))
             k, anchors = t['k'], t['anchors']
+            a.foot_pad = t.get('foot_pad', a.foot_pad)  # 몸과 같은 발 위치 (빠뜨려도 안 어긋나게)
         else:
             tallest = max(b[3] - b[1] for _, b in cells if b)
             k = body_h / tallest

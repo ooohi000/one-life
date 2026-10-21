@@ -9,10 +9,20 @@
 칸마다 먼저 몸 실루엣을 맞춰 보고 어긋난 정도를 보고한다. 어긋남이 크면 이 방식은 그 칸에서 실패.
 """
 import argparse
+import colorsys
 
 from PIL import Image
 
 LAYOUTS = {'idle': (4, 1), 'walk': (4, 4)}
+
+
+def is_skin(c):
+    """src/ui/game/character/skin.ts isSkin 과 같은 기준 (살구~갈색, 채도 있음)"""
+    if c[3] < 16:
+        return False
+    h, l, s = colorsys.rgb_to_hls(c[0] / 255, c[1] / 255, c[2] / 255)
+    h *= 360
+    return (h <= 50 or h >= 345) and s >= 0.2 and 0.08 < l < 0.97
 
 
 def alpha_mask(fr):
@@ -87,6 +97,10 @@ def main():
                     lp[x, y] = (0, 0, 0, 0)
         out.paste(layer, box[:2])
     out.save(args.out)
+    op = out.load()
+    skin = sum(1 for y in range(out.height) for x in range(out.width) if is_skin(op[x, y]))
+    if skin:
+        print(f'! 옷 층에 살구·갈색 도트 {skin}개 — 피부색을 바꿔도 이 도트는 안 바뀌어 얼룩이 된다 (옷 색이 피부 계열이면 무시)')
     print(f'\n저장 {args.out} · 어긋난 칸 {bad}/{cols * rows}')
     print('다음: python3 tools/sprite-qa.py 결과.png --layout ... --base 몸.png 으로 몸 밖으로 새는지 확인')
 
