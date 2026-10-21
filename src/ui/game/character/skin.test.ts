@@ -69,4 +69,12 @@ describe('피부색 바꾸기', () => {
     expect(lum(p, 2)).toBeGreaterThan(lum(p, 3));
     expect([...p.slice(16, 20)]).toEqual([0, 0, 0, 0]);
   });
+
+  it('바깥선이 가장 흔한 색이어도 기준 피부는 밝은 쪽에서 잡는다 (견본과 같은 색이면 거의 안 바뀐다)', () => {
+    const line: [number, number, number, number] = [90, 50, 38, 255];
+    const p = px(line, line, line, line, line, [239, 194, 155, 255], [239, 194, 155, 255], [200, 150, 115, 255]);
+    recolorSkin(p, '#efc29b');
+    expect(Math.abs(p[5 * 4]! - 239)).toBeLessThan(6);
+    expect(Math.abs(p[5 * 4 + 2]! - 155)).toBeLessThan(10);
+  });
 });

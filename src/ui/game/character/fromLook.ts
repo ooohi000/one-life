@@ -16,7 +16,8 @@ export function protagonistLook(look: Look, opts: { work?: boolean } = {}): Char
     hair: 'short-black',
     top: o === 0 ? 'school-summer' : o <= 2 ? 'school-shirt' : 'school-shirt',
     bottom: o === 0 ? 'school-pants-summer' : 'school-pants',
-    outer: opts.work ? 'store-vest' : o === 4 ? 'long-padding' : o === 3 ? 'school-jacket' : undefined,
+    // 봄·가을·초겨울은 교복 재킷, 한여름은 셔츠만, 한겨울은 롱패딩
+    outer: opts.work ? 'store-vest' : o === 4 ? 'long-padding' : o >= 1 ? 'school-jacket' : undefined,
     shoes: 'sneakers-white',
     acc: look.backpack && !opts.work ? [{ id: 'backpack-black', slot: 'back' }] : [],
     wet: look.wet,

@@ -72,11 +72,16 @@ export function recolorSkin(px: Uint8ClampedArray, target: string, mask?: Uint8C
   const whole = !mask && opaque > 0 && skinny < opaque * 0.3;
   const pick = (i: number) => (mask ? mask[i + 3]! > 16 && px[i + 3]! > 16 : whole ? px[i + 3]! > 16 : isSkin(px[i]!, px[i + 1]!, px[i + 2]!, px[i + 3]!));
   // 기준 피부 = 피부 도트 중 가장 흔한 색 (명암 단계의 가운데쯤이 가장 넓게 칠해진다)
+  // 바깥선(어두운 색)은 기준 후보에서 뺀다 — 선이 한 색으로 정리된 그림이면 선이 가장 흔한 색이 돼 버린다
   const count = new Map<number, number>();
-  for (let i = 0; i < px.length; i += 4) if (pick(i)) {
-    const k = (px[i]! << 16) | (px[i + 1]! << 8) | px[i + 2]!;
-    count.set(k, (count.get(k) ?? 0) + 1);
-  }
+  const tally = (minL: number) => {
+    for (let i = 0; i < px.length; i += 4) if (pick(i) && toHsl(px[i]!, px[i + 1]!, px[i + 2]!)[2] >= minL) {
+      const k = (px[i]! << 16) | (px[i + 1]! << 8) | px[i + 2]!;
+      count.set(k, (count.get(k) ?? 0) + 1);
+    }
+  };
+  tally(0.35);
+  if (!count.size) tally(0);
   if (!count.size) return 0;
   const ref = [...count.entries()].sort((a, b) => b[1] - a[1])[0]![0];
   const [, sRef, lRef] = toHsl((ref >> 16) & 255, (ref >> 8) & 255, ref & 255);
