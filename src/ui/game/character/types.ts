@@ -24,7 +24,8 @@ export interface LayerRef {
 }
 
 export interface CharacterLook {
-  body: { sex: Sex; age: AgeBand; build: Build };
+  /** skin: 피부색 (#hex 또는 SKIN_TONES 중 하나). 없으면 그림 그대로 */
+  body: { sex: Sex; age: AgeBand; build: Build; skin?: string };
   effects?: string[];
   face?: string;
   hair?: string;

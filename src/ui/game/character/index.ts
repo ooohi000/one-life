@@ -7,6 +7,7 @@ export * from './types';
 export { ACTIONS, orderFor, allLayers, layerKey } from './layers';
 export { composeSheet, LAYER_ROOT, type Composed } from './compose';
 export { protagonistLook } from './fromLook';
+export { SKIN_TONES, recolorSkin, isSkin } from './skin';
 
 /**
  * 주인공 시트 고르기: 조립형 몸 그림이 있으면 조립, 없으면 기존 통짜 시트 후보 중 있는 것, 그것도 없으면 null(코드 도트).

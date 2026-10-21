@@ -7,6 +7,7 @@ import type Phaser from 'phaser';
 import { hasArt } from '../art';
 import { ACTIONS, allLayers, layerKey, orderFor } from './layers';
 import { DIRS, type CharacterLook, type LayerRef } from './types';
+import { recolorSkin } from './skin';
 
 export const LAYER_ROOT = 'chars/layers';
 
@@ -47,7 +48,7 @@ export function composeSheet(scene: Phaser.Scene, look: CharacterLook, opts: { r
   if (scene.textures.exists(key)) return { key, action, frameW: fw, frameH: fh, missing };
 
   // 쓸 수 있는 층 (그림 있고 크기 같은 것만)
-  const usable = new Map<string, HTMLImageElement>();
+  const usable = new Map<string, HTMLImageElement | HTMLCanvasElement>();
   for (const l of layers) {
     const k = layerKey(root, l, action);
     if (!hasArt(k) || !scene.textures.exists(k)) {
@@ -61,7 +62,7 @@ export function composeSheet(scene: Phaser.Scene, look: CharacterLook, opts: { r
       warn(`크기 안 맞음: ${k}.png ${img.width}×${img.height} (몸은 ${bodySrc.width}×${bodySrc.height}) — 빼고 그린다`);
       continue;
     }
-    usable.set(`${l.kind}/${l.id}`, img);
+    usable.set(`${l.kind}/${l.id}`, l.kind === 'body' && look.body.skin ? skinned(scene, k, img, look.body.skin) : img);
   }
 
   const canvas = document.createElement('canvas');
@@ -87,4 +88,29 @@ export function composeSheet(scene: Phaser.Scene, look: CharacterLook, opts: { r
   const tex = scene.textures.addCanvas(key, canvas)!;
   for (let i = 0; i < 16; i++) tex.add(String(i), 0, (i % 4) * fw, Math.floor(i / 4) * fh, fw, fh);
   return { key, action, frameW: fw, frameH: fh, missing };
+}
+
+/** 몸 그림을 피부색만 바꿔서 (피부색마다 한 번, 캐시). `<동작>-skin.png` 마스크가 있으면 그걸 따른다 */
+function skinned(scene: Phaser.Scene, key: string, img: HTMLImageElement, skin: string): HTMLCanvasElement {
+  const ck = `skin:${key}:${skin}`;
+  if (scene.textures.exists(ck)) return scene.textures.get(ck).getSourceImage() as HTMLCanvasElement;
+  const c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  const g = c.getContext('2d', { willReadFrequently: true })!;
+  g.drawImage(img, 0, 0);
+  const data = g.getImageData(0, 0, c.width, c.height);
+  let mask: Uint8ClampedArray | undefined;
+  const mk = `${key}-skin`;
+  if (hasArt(mk) && scene.textures.exists(mk)) {
+    const m = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+    m.canvas.width = c.width;
+    m.canvas.height = c.height;
+    m.drawImage(scene.textures.get(mk).getSourceImage() as HTMLImageElement, 0, 0);
+    mask = m.getImageData(0, 0, c.width, c.height).data;
+  }
+  recolorSkin(data.data, skin, mask);
+  g.putImageData(data, 0, 0);
+  scene.textures.addCanvas(ck, c);
+  return c;
 }

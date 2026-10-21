@@ -10,7 +10,8 @@
  */
 import Phaser from 'phaser';
 import { ART, hasArt, preloadArt, ZOOM } from './art';
-import { composeSheet, type CharacterLook } from './character';
+import { composeSheet, SKIN_TONES, type CharacterLook } from './character';
+import { fmtProportions, proportions } from './character/measure';
 import { FONT, TEXT_RES, Walker } from './common';
 import type { Look } from './pixel';
 
@@ -74,7 +75,8 @@ export class SpriteTestScene extends Phaser.Scene {
 
     label(6, 4, '게임 크기 (키 32) — 배경과 도트 밀도 비교', 7);
     label(6, 136, '원본 도트 (그림 1도트 = 화면 1도트)', 7);
-    label(6, H - 12, '1·2·3: 배율 1×·2×·4×   방향키: 이동', 6);
+    label(330, 4, '1·2·3: 배율 1×·2×·4×   방향키: 이동', 6);
+    label(6, 224, '피부색 6단계 (팔레트 교체 — 속옷·신발은 그대로여야 한다)', 6);
 
     // 기존 통짜 시트 (비교 기준)
     let x = 20;
@@ -107,6 +109,24 @@ export class SpriteTestScene extends Phaser.Scene {
         this.add.image(x + full.frameW * nat / 2 + 2 + i * (full.frameW * nat + 4), 214, full.key, String(f)).setOrigin(0.5, 1).setScale(nat).setDepth(214);
       });
       label(x, 84, '↑ 몸만   ↓ 옷 합성', 5);
+      // 비율 (정면 정지 칸) — 0-A·0-B가 같은 디자인인지
+      const src = this.textures.get(`${g.root}/body/${g.look.body.sex}-${g.look.body.age}-${g.look.body.build}/idle`).getSourceImage() as HTMLImageElement;
+      const cv = document.createElement('canvas');
+      cv.width = full.frameW;
+      cv.height = full.frameH;
+      const cg = cv.getContext('2d')!;
+      cg.drawImage(src, 0, 0, full.frameW, full.frameH, 0, 0, full.frameW, full.frameH);
+      const al = cg.getImageData(0, 0, full.frameW, full.frameH).data.filter((_, i) => i % 4 === 3);
+      const pr = proportions(al, full.frameW, full.frameH);
+      if (pr) {
+        label(x, 26, fmtProportions(pr), 4);
+        console.info(`[sprite-test] ${g.root} ${fmtProportions(pr)}`);
+      }
+      // 피부색 (몸 + 옷, 정면)
+      SKIN_TONES.forEach((tone, i) => {
+        const t = composeSheet(this, { ...g.look, body: { ...g.look.body, skin: tone } }, { root: g.root, actions: ['idle'] });
+        if (t) this.add.image(x + 8 + i * 20, 266, t.key, '0').setOrigin(0.5, 1).setScale(k).setDepth(266);
+      });
       // 걷기 그림이 있으면 걸려 본다
       if (g.hasWalk) {
         const walk = composeSheet(this, g.look, { root: g.root, actions: ['walk'] });
