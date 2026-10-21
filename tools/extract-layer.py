@@ -51,6 +51,7 @@ def main():
     ap.add_argument('--layout', choices=LAYOUTS, required=True)
     ap.add_argument('--tol', type=int, default=40, help='색 차이 허용 (RGB 거리)')
     ap.add_argument('--align', action='store_true', help='어긋나면 옷 입은 칸을 옮겨서 맞춘다 (보정)')
+    ap.add_argument('--drop-skin', action='store_true', help='살구·갈색 도트는 버린다 (생성기가 팔다리를 다시 그려 생긴 차이 — 옷 색이 피부 계열이면 쓰지 말 것)')
     args = ap.parse_args()
 
     base = Image.open(args.base).convert('RGBA')
@@ -87,7 +88,7 @@ def main():
                     continue
                 b = bp[x, y]
                 diff = abs(c[0] - b[0]) + abs(c[1] - b[1]) + abs(c[2] - b[2]) if b[3] > 16 else 999
-                if diff > args.tol:
+                if diff > args.tol and not (args.drop_skin and is_skin(c)):
                     lp[x, y] = c
                     kept += 1
         # 외톨이 도트 제거 (이웃 0개)
