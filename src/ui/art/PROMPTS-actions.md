@@ -17,14 +17,14 @@
 
 ---
 
-## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부: docs/art-ref/character/body-suit-sheet.png — "남자 - 기본 체형" 줄이 기준)
+## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부 없음 — 기준 시트는 머리가 커서 2.2등신으로 따라 나온다. v2 검증 결과)
 > GPT 이미지 거부 피해서 고친 문구 (2026-10-21): "맨몸·속옷 없음" 대신 "피부색 불투명 바디슈트를 입은 인형"으로 쓴다.
 ```
 High-quality handcrafted pixel art for a Korean life simulation RPG, with crisp pixel edges, a cohesive warm palette,
 clean one-pixel outlines at native sprite resolution, and carefully controlled stepped shading.
 
 Create a four-direction sprite sheet of ONE stylized, faceless humanoid character-customization mannequin,
-matching the proportions and visual language of the attached reference (use the male average-build row as the model).
+in the visual language of Witchbrook and Stardew Valley.
 
 The character is an approximately three-head-tall game mannequin with an average male build, wearing an opaque peach-colored
 full-body bodysuit, including integrated hands and feet. Its surface is smooth and seamless, with no visible garment seams,
@@ -47,7 +47,9 @@ Sprite sheet layout:
 - No checkerboard background.
 - No labels, captions, grid lines, guides, shadows, or additional characters.
 
-The reference image is a design guide only. Do not reproduce its multiple body types, Korean labels, panels, or layout.
+IMPORTANT proportions: the head (top of head to chin) must be exactly one third of the total height; the body from neck to feet is two thirds.
+This is a teenager, not a baby or toddler: a narrower head, longer legs and torso than a chibi doll.
+Column 3 must face RIGHT and be the exact mirror image of column 2, which faces LEFT.
 ```
 
 ## 0-B. 같은 몸 — 정지 4방향, 64×128 후보 (0-A 그림 첨부)
