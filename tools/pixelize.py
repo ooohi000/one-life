@@ -136,6 +136,10 @@ def main():
     ap.add_argument('--use-transform', help='저장한 배율·칸 위치를 그대로 쓴다 (같은 몸의 옷 입은 그림 처리할 때 — 층이 안 어긋나게)')
     a = ap.parse_args()
     img = Image.open(a.src).convert('RGBA')
+    # 원본이 이미 진짜 투명 배경이면 흰 테두리 지우기(strip_halo)는 건너뛴다 — 안 그러면 몸 가장자리 피부까지 지워져 구멍이 난다
+    w0, h0 = img.size
+    real_alpha = all(img.getpixel(p)[3] < 10 for p in [(0, 0), (w0 - 1, 0), (0, h0 - 1), (w0 - 1, h0 - 1)])
+    halo = (lambda im: im) if real_alpha else strip_halo
     if not a.keep_bg:
         img = remove_bg(img, a.tol)
 
@@ -177,7 +181,7 @@ def main():
             hx, bottom = anchors[i]
             sw = int(fw / k)
             src = cell.crop((int(hx - sw / 2), bottom - int(avail / k), int(hx - sw / 2) + sw, bottom))
-            small = strip_halo(down_mode(src, fw, avail, a.colors))
+            small = halo(down_mode(src, fw, avail, a.colors))
             sheet.paste(small, ((i % cols) * fw, (i // cols) * fh))
         out = quantize(sheet, a.colors)
         os.makedirs(os.path.dirname(a.dst) or '.', exist_ok=True)

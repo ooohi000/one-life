@@ -10,7 +10,7 @@ import type { CharacterLook } from './types';
 export function protagonistLook(look: Look, opts: { work?: boolean } = {}): CharacterLook {
   const o = look.outfit;
   return {
-    // 몸 그림은 회색 마네킹이라 피부색을 꼭 입힌다
+    // 기본 피부색 (몸 그림 피부만 바뀌고 회색 속옷은 그대로)
     body: { sex: 'm', age: 'teen', build: 'average', skin: SKIN_TONES[1] },
     face: 'basic',
     hair: 'short-black',

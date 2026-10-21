@@ -17,15 +17,17 @@
 
 ---
 
-## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부 없음)
-> 2026-10-21 GPT 거부 두 번 → **성인 남자 몸**으로 (고등학생도 이 몸을 쓴다). 나이·학년 단어는 넣지 않는다. 몸 색은 살구색 그대로.
+## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부 없음) ✅ v3 통과 (2026-10-21)
+> 거부된 것들: 피부색 바디슈트·마네킹("맨몸"으로 읽힘), 나이 단어. **통과한 것: 짧은 사각팬티 하나만 입은 기본 몸.**
+> 고등학생 주인공도 이 몸을 쓴다 (키는 pixelize `--height`로). 속옷은 짙은 회색 — 피부색 바꾸기에서 안 변한다.
 ```
 High-quality handcrafted pixel art for a life simulation RPG, in the visual language of Witchbrook and Stardew Valley:
 crisp pixel edges, clean one-pixel dark outlines, carefully controlled stepped shading.
 
-Create a four-direction sprite sheet of ONE smooth peach-colored mannequin figure used as a base for a game's clothing system,
-like a vinyl toy figure or a store display mannequin. Adult man, average build, about three heads tall.
-One peach color family with stepped shading. Simple rounded hands and feet. Bald blank head with no face.
+A four-direction sprite sheet of ONE young man, average build, about three heads tall, used as the base body
+for a character creator where clothes are layered on later. He wears only plain dark gray short boxer briefs, barefoot.
+Bald head with a blank face (no eyes, nose or mouth) because hair and faces are added later as separate layers.
+Warm natural skin tone with stepped shading. Simple, non-detailed body shapes like a game sprite.
 
 Sprite sheet layout:
 - One row, four columns: front (facing down), left profile (facing left), right profile (facing right), back (facing up).
@@ -36,6 +38,7 @@ Sprite sheet layout:
 - Head height is one third of the total height.
 - Pure white (#FFFFFF) flat background. No checkerboard, no labels, no grid lines, no shadows, no other figures.
 ```
+처리: `pixelize --sheet 4x1 --frame 32x64 --height 56 --foot-pad 1 --colors 64` → `cleanup-sprite --left-from-right --tones 5` (v3는 왼쪽 옆모습이 앞뒤가 섞여서 오른쪽을 뒤집어 씀)
 
 ## 0-B. 같은 몸 — 정지 4방향, 64×128 후보 (0-A 그림 첨부)
 ```
