@@ -116,6 +116,32 @@ def quantize(img: Image.Image, colors: int) -> Image.Image:
     return q
 
 
+def auto_bands(img, n, axis):
+    """불투명한 도트가 있는 열(axis=0)/줄(axis=1)의 덩어리를 찾아 n개 띠로. 띠 사이 빈 곳의 가운데를 경계로 쓴다"""
+    a = img.getchannel('A')
+    w, h = img.size
+    px = a.load()
+    L = w if axis == 0 else h
+    filled = [any(px[(i, j) if axis == 0 else (j, i)] > 16 for j in range(0, h if axis == 0 else w, 2)) for i in range(L)]
+    runs = []
+    for i, f in enumerate(filled):
+        if f and (not runs or runs[-1][1] != i - 1):
+            runs.append([i, i])
+        elif f:
+            runs[-1][1] = i
+    # 잡티(아주 짧은 덩어리)는 버리고, 많으면 가까운 것끼리 합친다
+    runs = [r for r in runs if r[1] - r[0] > L * 0.01]
+    while len(runs) > n:
+        gaps = [(runs[k + 1][0] - runs[k][1], k) for k in range(len(runs) - 1)]
+        _, k = min(gaps)
+        runs[k] = [runs[k][0], runs[k + 1][1]]
+        del runs[k + 1]
+    if len(runs) != n:
+        raise SystemExit(f'--auto-grid: {"열" if axis == 0 else "줄"} {n}개를 못 찾음 ({len(runs)}개)')
+    edges = [0] + [(runs[k][1] + runs[k + 1][0]) // 2 for k in range(n - 1)] + [L]
+    return [(edges[k], edges[k + 1]) for k in range(n)]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('src')
@@ -130,6 +156,7 @@ def main():
     ap.add_argument('--names', help='잘린 칸 이름 (쉼표)')
     ap.add_argument('--sheet', help='CxR 캐릭터 시트 → 한 장 (칸마다 발을 바닥에, 머리를 가운데에 맞춤)')
     ap.add_argument('--frame', default='16x32', help='시트 한 칸 크기')
+    ap.add_argument('--auto-grid', action='store_true', help='칸을 균등 분할하지 않고 빈 줄·빈 열로 사람을 찾아 나눈다 (생성 그림의 칸 간격이 고르지 않을 때)')
     ap.add_argument('--height', type=int, help='캐릭터 키(도트). 없으면 칸 높이-1에 꽉 채움 — 체형·나이 키 차이를 살리려면 꼭 지정')
     ap.add_argument('--foot-pad', type=int, default=0, help='발바닥 아래 여백(도트). 모든 층이 같아야 한다')
     ap.add_argument('--save-transform', help='이 시트에 쓴 배율·칸 위치를 json으로 저장 (몸 그림 처리할 때)')
@@ -147,10 +174,15 @@ def main():
         cols, rows = map(int, a.sheet.split('x'))
         fw, fh = map(int, a.frame.split('x'))
         cw, ch = img.width / cols, img.height / rows
+        if a.auto_grid:
+            xb, yb = auto_bands(img, cols, 0), auto_bands(img, rows, 1)
+        else:
+            xb = [(int(c * cw), int((c + 1) * cw)) for c in range(cols)]
+            yb = [(int(r * ch), int((r + 1) * ch)) for r in range(rows)]
         cells = []
         for r in range(rows):
             for c in range(cols):
-                cell = img.crop((int(c * cw), int(r * ch), int((c + 1) * cw), int((r + 1) * ch)))
+                cell = img.crop((xb[c][0], yb[r][0], xb[c][1], yb[r][1]))
                 box = cell.getbbox()
                 cells.append((cell, box))
         # 모든 칸에 같은 배율 (키가 프레임마다 달라지지 않게)

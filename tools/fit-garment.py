@@ -31,6 +31,7 @@ def main():
     ap.add_argument('slot')
     ap.add_argument('out')
     ap.add_argument('--colors', type=int, default=16)
+    ap.add_argument('--design-col', type=int, help='모든 칸에 디자인의 이 칸(0 앞·1 왼·2 오른·3 뒤)을 쓴다 — 걷기 시트를 방향 줄별로 입힐 때')
     a = ap.parse_args()
     body = Image.open(a.body).convert('RGBA')
     slot = Image.open(a.slot).convert('RGBA')
@@ -43,7 +44,8 @@ def main():
         box = s.getbbox()
         if not box:
             continue
-        cell = design.crop((int(i * dw), 0, int((i + 1) * dw), design.height))
+        dc = i if a.design_col is None else a.design_col
+        cell = design.crop((int(dc * dw), 0, int((dc + 1) * dw), design.height))
         cbox = cell.getbbox()
         if not cbox:
             continue
