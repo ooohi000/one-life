@@ -9,7 +9,7 @@
 
 몸 기준 (docs/art-ref/character/CHARACTER-SYSTEM.md):
 - 머리카락·눈·코·입·눈썹 **없음** (머리·얼굴은 따로 얹는다)
-- **피부색 전신 바디슈트를 입은 마네킹**: 봉제선·목둘레·소매·허리밴드 없이 매끈한 인형. 실제 피부·해부학 묘사 없음 — 옷은 전부 층으로 덮는다
+- **회색 마네킹 (성인 남자 몸)**: 매끈한 회색 점토 인형·상점 마네킹 같은 몸. 고등학생도 이 몸을 쓴다. 피부색은 코드가 입힌다. 옷은 전부 층으로 덮는다
   (기준 그림: `docs/art-ref/character/BASE-BODY-REFERENCE.png`, `docs/art-ref/character/body-suit-sheet.png`)
 - 게임 화면엔 윗옷·바지가 갖춰져야만 나온다 (빠지면 기존 그림으로 — 코드가 막는다)
 - 4방향 모두 키·발 위치가 같아야 한다. 왼쪽·오른쪽은 진짜 반대 방향
@@ -17,44 +17,30 @@
 
 ---
 
-## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부 없음 — 기준 시트는 머리가 커서 2.2등신으로 따라 나온다. v2 검증 결과)
-> GPT 이미지 거부 피해서 고친 문구 (2026-10-21): "맨몸·속옷 없음" 대신 "피부색 불투명 바디슈트를 입은 인형"으로 쓴다.
+## 0-A. 기준 몸 — 정지 4방향, 32×64 후보 (첨부 없음)
+> 2026-10-21 GPT 거부 두 번 → 바꾼 것: **성인 남자 몸**(고등학생도 이 몸을 쓴다), **회색 마네킹**(피부색 몸은 맨몸으로 읽힌다).
+> 피부색은 코드가 회색 명암 위에 입힌다 (`character/skin.ts`). 나이·학년 단어는 넣지 않는다.
 ```
-High-quality handcrafted pixel art for a Korean life simulation RPG, with crisp pixel edges, a cohesive warm palette,
-clean one-pixel outlines at native sprite resolution, and carefully controlled stepped shading.
+High-quality handcrafted pixel art for a life simulation RPG, in the visual language of Witchbrook and Stardew Valley:
+crisp pixel edges, clean one-pixel dark outlines, carefully controlled stepped shading.
 
-Create a four-direction sprite sheet of ONE stylized, faceless humanoid character-customization mannequin,
-in the visual language of Witchbrook and Stardew Valley.
-
-The character is an approximately three-head-tall game mannequin with an average male build, wearing an opaque peach-colored
-full-body bodysuit, including integrated hands and feet. Its surface is smooth and seamless, with no visible garment seams,
-zippers, cuffs, neckline, waistband, or separate clothing pieces. It is a fully covered stylized doll, not an anatomical human figure.
-Use one peach color family with stepped shading and a dark outline.
-
-The head is bald and completely blank, without eyes, eyebrows, nose, mouth, or hair. The silhouette is compact and balanced,
-with rounded hands and feet.
+Create a four-direction sprite sheet of ONE light gray display mannequin used as a base for a game's clothing system,
+like a smooth gray clay figure or a store display mannequin. Adult man, average build, about three heads tall.
+Matte light gray all over, one gray color family with stepped shading. Simple rounded hands and feet. Bald blank head with no face.
 
 Sprite sheet layout:
-- One row, four columns.
-- Column 1: front / facing down.
-- Column 2: left profile / facing left.
-- Column 3: right profile / facing right.
-- Column 4: back / facing up.
-- Identical character proportions, height, ground baseline, and consistent shading in all four directions.
+- One row, four columns: front (facing down), left profile (facing left), right profile (facing right), back (facing up).
+- Column 3 is the exact mirror image of column 2.
+- Same height, same ground line and same proportions in all four columns.
 - Relaxed standing pose, arms at the sides.
-- Each target frame is 32 x 64 pixels. Target final sprite sheet dimensions: 128 x 64 pixels.
-- Pure white (#FFFFFF) flat background if genuine alpha transparency cannot be produced.
-- No checkerboard background.
-- No labels, captions, grid lines, guides, shadows, or additional characters.
-
-IMPORTANT proportions: the head (top of head to chin) must be exactly one third of the total height; the body from neck to feet is two thirds.
-This is a teenager, not a baby or toddler: a narrower head, longer legs and torso than a chibi doll.
-Column 3 must face RIGHT and be the exact mirror image of column 2, which faces LEFT.
+- Each frame 32 x 64 pixels, whole sheet 128 x 64 pixels.
+- Head height is one third of the total height.
+- Pure white (#FFFFFF) flat background. No checkerboard, no labels, no grid lines, no shadows, no other figures.
 ```
 
 ## 0-B. 같은 몸 — 정지 4방향, 64×128 후보 (0-A 그림 첨부)
 ```
-Using the approved 0-A character as the sole design reference, recreate the same four-direction mannequin at a target native
+Using the approved 0-A gray mannequin as the sole design reference, recreate the same four-direction mannequin at a target native
 resolution of 64 x 128 pixels per frame.
 
 Maintain exactly the same silhouette, proportions, direction order, pose, color palette, and baseline. Add carefully controlled
@@ -68,7 +54,7 @@ Pure white background or genuine alpha transparency. No checkerboard, labels, gu
 ## 0-C. 옷 층 시험 — 티셔츠 1벌 (확정된 몸 첨부)
 ```
 Same mannequin, same pose, same frame size and exactly the same position in every frame as the attached sprite sheet.
-Change only one thing: it now wears a plain gray crew-neck short-sleeve t-shirt over the peach bodysuit.
+Change only one thing: it now wears a plain navy blue crew-neck short-sleeve t-shirt.
 Do not move, resize or redraw the body, head, arms or legs — every pixel outside the t-shirt must stay identical.
 One row, four columns: front, left, right, back. Pure white (#FFFFFF) flat background, no checkerboard. No labels, no grid lines.
 ```

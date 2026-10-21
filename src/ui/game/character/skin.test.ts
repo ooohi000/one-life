@@ -59,4 +59,14 @@ describe('피부색 바꾸기', () => {
     expect(recolorSkin(p, SKIN_TONES[5], mask)).toBe(1);
     expect([...p.slice(0, 4)]).toEqual([250, 214, 186, 255]);
   });
+
+  it('회색 마네킹 몸이면 몸 전체에 피부색을 입히고 명암은 유지한다', () => {
+    const p = px([220, 220, 222, 255], [180, 180, 182, 255], [140, 140, 142, 255], [40, 40, 44, 255], [0, 0, 0, 0]);
+    expect(recolorSkin(p, SKIN_TONES[2])).toBe(4);
+    expect(isSkin(p[0]!, p[1]!, p[2]!, p[3]!)).toBe(true);
+    expect(lum(p, 0)).toBeGreaterThan(lum(p, 1));
+    expect(lum(p, 1)).toBeGreaterThan(lum(p, 2));
+    expect(lum(p, 2)).toBeGreaterThan(lum(p, 3));
+    expect([...p.slice(16, 20)]).toEqual([0, 0, 0, 0]);
+  });
 });

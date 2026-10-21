@@ -3,6 +3,7 @@
  * → 체형 × 나이 × 동작이 늘어도 피부색 때문에 그림 장수가 곱해지지 않는다.
  *
  * 피부 도트 고르기:
+ *   0) 회색 마네킹 몸(피부색 도트가 30% 미만)이면 몸 층 전체를 피부로 — 회색 명암 위에 피부색을 입힌다
  *   1) 마스크 그림이 있으면 그걸 쓴다 (`<동작>-skin.png`, 불투명한 곳 = 피부)
  *   2) 없으면 색으로 고른다: 살구~갈색 계열(색상 0~50°)이면서 채도가 있는 도트.
  *      회색 속옷·바지, 검은 신발은 채도가 낮아서 안 바뀐다.
@@ -61,7 +62,15 @@ export function isSkin(r: number, g: number, b: number, a: number): boolean {
  * mask: 같은 크기 RGBA, 알파가 있는 곳만 피부.
  */
 export function recolorSkin(px: Uint8ClampedArray, target: string, mask?: Uint8ClampedArray): number {
-  const pick = (i: number) => (mask ? mask[i + 3]! > 16 && px[i + 3]! > 16 : isSkin(px[i]!, px[i + 1]!, px[i + 2]!, px[i + 3]!));
+  // 회색 마네킹 몸(피부색 도트가 거의 없음)이면 몸 층 전체가 피부 — 회색 명암에 피부색을 입힌다
+  let opaque = 0;
+  let skinny = 0;
+  if (!mask) for (let i = 0; i < px.length; i += 4) if (px[i + 3]! > 16) {
+    opaque++;
+    if (isSkin(px[i]!, px[i + 1]!, px[i + 2]!, px[i + 3]!)) skinny++;
+  }
+  const whole = !mask && opaque > 0 && skinny < opaque * 0.3;
+  const pick = (i: number) => (mask ? mask[i + 3]! > 16 && px[i + 3]! > 16 : whole ? px[i + 3]! > 16 : isSkin(px[i]!, px[i + 1]!, px[i + 2]!, px[i + 3]!));
   // 기준 피부 = 피부 도트 중 가장 흔한 색 (명암 단계의 가운데쯤이 가장 넓게 칠해진다)
   const count = new Map<number, number>();
   for (let i = 0; i < px.length; i += 4) if (pick(i)) {
@@ -78,9 +87,11 @@ export function recolorSkin(px: Uint8ClampedArray, target: string, mask?: Uint8C
     const [h, s, l] = toHsl(px[i]!, px[i + 1]!, px[i + 2]!);
     // 기준보다 어두우면 비율대로, 밝으면 남은 밝기 안에서 비율대로
     const nl = l <= lRef ? lT * (l / (lRef || 1)) : lT + (1 - lT) * ((l - lRef) / (1 - lRef || 1));
-    const ns = Math.min(1, sT * (s / (sRef || 1)));
+    // 회색 바탕(채도 거의 없음)이면 견본 색을 그대로 입힌다
+    const gray = sRef < 0.1;
+    const ns = gray ? sT : Math.min(1, sT * (s / (sRef || 1)));
     // 그늘 쪽 색상 기울기(붉은 그림자 등)는 살린다
-    const nh = hT + (h > 180 ? h - 360 : h) - (hexHueOf(ref));
+    const nh = gray ? hT : hT + (h > 180 ? h - 360 : h) - hexHueOf(ref);
     const [r, g, b] = toRgb([nh, ns, Math.max(0, Math.min(1, nl))]);
     px[i] = r;
     px[i + 1] = g;
