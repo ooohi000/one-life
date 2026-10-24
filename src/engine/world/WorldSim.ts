@@ -430,7 +430,7 @@ export class WorldSim {
    * 알바 가는 갈림길에서 "간다"를 고르면 근무가 시작된다. 화면은 이 shift를 직접 조작하고, 끝나면 finishShift().
    * 손님으로는 이 동네 사는 같은 반·친구·일진, 친구 엄마가 섞여 온다.
    */
-  startShift(screen?: { pace: number; patience: number }): ConvenienceShift | null {
+  startShift(screen?: { pace: number; patience: number; walkIn?: boolean }): ConvenienceShift | null {
     const pl = this.player;
     const dcs = this.playerDecision;
     if (!pl || !this.playerJob || this.playerJob.fired || dcs?.kind !== 'commitment' || dcs.action.id !== 'partTime') return null;

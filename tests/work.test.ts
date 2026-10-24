@@ -49,3 +49,29 @@ describe('편의점 근무', () => {
     expect(job.fired).toBe(true);
   });
 });
+
+describe('화면 근무: 손님 기다림', () => {
+  const start = () => new ConvenienceShift(newJob(new Random(5)), me, new Random(5), [], { start: 18 * 60, end: 21 * 60, pace: 1, patience: 1, walkIn: true });
+
+  it('물건 고르는 동안은 기다림을 안 센다 — 줄에 서야 센다', () => {
+    const s = start();
+    while (!s.queue.length) s.tick();
+    const c = s.queue[0]!;
+    for (let i = 0; i < 10; i++) s.tick();
+    expect(s.queue).toContain(c); // 인내심(최대 8분)보다 오래 둘러봐도 안 나간다
+    s.reachedLine(c.n);
+    for (let i = 0; i < 12 && s.queue.includes(c); i++) s.tick();
+    expect(s.queue).not.toContain(c);
+    expect(s.report.leftAngry).toBeGreaterThan(0);
+  });
+
+  it('나가기 전에 재촉하고, 한 말에는 누가 했는지 붙는다', () => {
+    const s = start();
+    while (!s.queue.length) s.tick();
+    const c = s.queue[0]!;
+    s.reachedLine(c.n);
+    for (let i = 0; i < 12 && s.queue.includes(c); i++) s.tick();
+    const said = s.report.events.filter((e) => e.who === c.n);
+    expect(said.length).toBeGreaterThanOrEqual(2); // 재촉 한 번 + 나가며 한마디
+  });
+});

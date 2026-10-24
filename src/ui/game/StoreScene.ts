@@ -1,6 +1,7 @@
 /**
  * 편의점 안. 위에서 내려다본 도트 매장.
  * 손님은 엔진(ConvenienceShift)의 queue를 그대로 따라 그린다 — 들어와서 진열대를 둘러보고, 줄을 서고, 기다리다 지치면 나간다.
+ * 기다림은 줄에 선 순간부터 센다(reachedLine). 지치기 전에 머리 위에 티가 나고(… → !!), 한 말은 그 손님 머리 위 말풍선으로 뜬다.
  * 주인공은 직접 걸어서 계산대·진열대·쏟은 자리로 가 E를 누른다. 실제 손놀림은 React 쪽 미니게임.
  */
 import Phaser from 'phaser';
@@ -111,6 +112,8 @@ interface Shopper {
   tag: Phaser.GameObjects.Text | null;
   /** 줄 자리에 한 번 도착했나 (그 뒤로는 줄이 줄면 옆으로만 당긴다) */
   arrived: boolean;
+  /** 지금 머리 위에 떠 있는 말풍선 (손님을 따라다닌다) */
+  say: Phaser.GameObjects.Container | null;
 }
 
 export class StoreScene extends Phaser.Scene {
@@ -261,7 +264,9 @@ export class StoreScene extends Phaser.Scene {
 
     this.syncShoppers(dtMs, s.queue);
     this.syncSpills(s.tasks);
+    this.showEvents();
     this.drawMarks(s.tasks, s.queue);
+    this.drawFret(s.queue, s.minute);
     this.drawWindows(s.minute);
   }
 
@@ -288,7 +293,7 @@ export class StoreScene extends Phaser.Scene {
       if (c.visitor) {
         tag = this.add.text(0, 0, c.visitor.name, { fontFamily: FONT, fontSize: '7px', fontStyle: '600', resolution: TEXT_RES, color: c.visitor.relation === 'bully' ? '#ff8a8a' : '#ffe08a', backgroundColor: '#1b1b1baa', padding: { x: 1, y: 0 } }).setOrigin(0.5, 1).setDepth(9_100);
       }
-      this.shoppers.set(c.n, { c, w, path, state: 'enter', wait: 0, tag, arrived: false });
+      this.shoppers.set(c.n, { c, w, path, state: 'enter', wait: 0, tag, arrived: false, say: null });
       if (session.shift!.opts.raining && Math.random() < 0.7) w.look = { ...w.look, wet: Math.random() < 0.3 };
     }
     // 줄에서 빠진 손님은 나간다 (계산했거나, 지쳐서)
@@ -336,6 +341,7 @@ export class StoreScene extends Phaser.Scene {
             sh.path.push(SL.slot(Math.max(0, i)));
           }
         } else if (sh.state === 'queue') {
+          if (!sh.arrived) session.shift?.reachedLine(n);
           sh.arrived = true;
           sh.w.dir = 'left';
           const i = queue.findIndex((c) => c.n === n);
@@ -343,12 +349,14 @@ export class StoreScene extends Phaser.Scene {
         } else if (sh.state === 'leave') {
           sh.w.destroy();
           sh.tag?.destroy();
+          if (sh.say?.active) sh.say.destroy();
           this.shoppers.delete(n);
           continue;
         }
       }
       sh.w.update(dtMs);
       sh.tag?.setPosition(Math.round(sh.w.x), Math.round(sh.w.y - sh.w.height));
+      if (sh.say?.active) sh.say.setPosition(Math.round(sh.w.x), Math.round(sh.w.y - sh.w.height - (sh.tag ? 8 : 1)));
     }
   }
 
@@ -450,12 +458,29 @@ export class StoreScene extends Phaser.Scene {
         bubble(this, this.me.x, this.me.y - this.me.height - 2, `(전화) ${line}`, 3200);
         continue;
       }
-      for (const sh of this.shoppers.values()) {
-        if (who === sh.c.label || (sh.c.visitor && who.startsWith(sh.c.visitor.name))) {
-          bubble(this, sh.w.x, sh.w.y - sh.w.height - 1, line);
-          break;
-        }
-      }
+      // 누가 말했는지는 엔진이 손님 번호로 알려 준다 (같은 '퇴근하는 직장인'이 여럿이어도 헷갈리지 않게)
+      const sh = e.who !== undefined ? this.shoppers.get(e.who) : [...this.shoppers.values()].find((x) => who === x.c.label);
+      if (!sh) continue;
+      if (sh.say?.active) sh.say.destroy();
+      sh.say = bubble(this, sh.w.x, sh.w.y - sh.w.height - (sh.tag ? 8 : 1), line, 3000);
+    }
+  }
+
+  /** 기다림이 머리 위에 드러난다: 반쯤 기다리면 '…', 곧 나갈 것 같으면 빨간 '!!' */
+  private drawFret(queue: Customer[], minute: number) {
+    const g = this.marks;
+    for (const c of queue) {
+      const sh = this.shoppers.get(c.n);
+      if (!sh || c.waitingSince === null || c.fret === 0 || sh.say?.active) continue;
+      const x = Math.round(sh.w.x);
+      const y = Math.round(sh.w.y - sh.w.height - (sh.tag ? 9 : 2));
+      const angry = c.fret === 2 || minute - c.waitingSince > c.patience * 0.75;
+      const shake = angry ? Math.round(Math.sin(this.time.now / 40)) : 0;
+      g.fillStyle(0x1b1b1b, 1).fillRect(x - 7 + shake, y - 8, 14, 8);
+      g.fillStyle(angry ? 0xff5a5a : 0xffffff, 1).fillRect(x - 6 + shake, y - 7, 12, 6);
+      g.fillStyle(0x1b1b1b, 1);
+      if (angry) g.fillRect(x - 3 + shake, y - 6, 2, 3).fillRect(x - 3 + shake, y - 2, 2, 1).fillRect(x + 1 + shake, y - 6, 2, 3).fillRect(x + 1 + shake, y - 2, 2, 1);
+      else for (let k = 0; k < 3; k++) if (Math.floor(this.time.now / 300) % 4 > k) g.fillRect(x - 4 + k * 3, y - 4, 2, 2);
     }
   }
 }

@@ -64,8 +64,15 @@ export interface Customer {
   label: string;
   items: Product[];
   arrived: number;
+  /**
+   * 줄에 선 시각. 이때부터 기다림을 센다 — 매장 안을 둘러보는 동안은 안 센다.
+   * null = 아직 물건 고르는 중 (화면에서 직접 할 때만. 자동 근무는 들어오자마자 줄에 선다)
+   */
+  waitingSince: number | null;
   /** 기다릴 수 있는 시간(분) */
   patience: number;
+  /** 기다림이 드러난 단계: 0 괜찮음 → 1 시계를 본다 → 2 대놓고 재촉 */
+  fret: 0 | 1 | 2;
   visitor?: KnownVisitor;
   /** 내는 돈 */
   pays: number;
@@ -105,6 +112,8 @@ export interface ShiftEvent {
   minute: number;
   text: string;
   kind: 'customer' | 'task' | 'dilemma' | 'boss' | 'people' | 'trouble';
+  /** 말한 손님 (Customer.n) — 화면이 누구 머리 위에 말풍선을 띄울지 안다 */
+  who?: number;
 }
 
 export type BossType = 'kind' | 'strict' | 'stingy';
@@ -210,7 +219,12 @@ export interface ShiftOptions {
    */
   pace?: number;
   patience?: number;
+  /** 화면: 손님이 걸어 들어와 물건을 고른 뒤 줄에 선다 (reachedLine으로 알려 준다) */
+  walkIn?: boolean;
 }
+
+/** 물건 고르다 줄에 안 서고 이만큼(분) 지나면 그냥 줄에 선 걸로 친다 (화면이 놓쳤을 때) */
+const BROWSE_MAX = 20;
 
 /**
  * 근무 한 번. tick()으로 1분씩 흘러가고, 할 일(tasks)과 고민(dilemma)이 생긴다.
@@ -270,15 +284,26 @@ export class ConvenienceShift {
     this.report.minutes++;
     // 손님
     if (rng.chance(arrivalRate(this.minute) * (this.opts.raining ? 1.3 : 1) * (this.opts.pace ?? 1))) this.arrive();
-    // 기다리다 지친 손님
+    // 기다림: 줄에 선 뒤부터 센다. 지치기 전에 티가 난다 (시계 보기 → 재촉 → 나감)
     for (const c of [...this.queue]) {
-      if (this.minute - c.arrived > c.patience) {
+      if (c.waitingSince === null) {
+        if (this.minute - c.arrived > BROWSE_MAX) c.waitingSince = this.minute;
+        continue;
+      }
+      const waited = this.minute - c.waitingSince;
+      if (waited > c.patience) {
         this.queue.splice(this.queue.indexOf(c), 1);
         const ti = this.tasks.findIndex((t) => t.customer === c);
         if (ti >= 0) this.tasks.splice(ti, 1);
         this.report.leftAngry++;
         this.satisfy(0);
-        this.log('customer', `${c.label}: "${rng.pick(['아 됐어요.', '장사 안 하나?', '(물건을 내려놓고 나간다)'])}"`);
+        this.log('customer', `${c.label}: "${rng.pick(['아 됐어요.', '장사 안 하나?', '(물건을 내려놓고 나간다)'])}"`, c.n);
+      } else if (c.fret < 2 && waited > c.patience * 0.75) {
+        c.fret = 2;
+        const lines = c.kind === 'elder' ? ['학생, 계산 좀 해 줘요.'] : c.kind === 'rude' || c.kind === 'drunk' ? ['야, 계산 안 해?', '아 진짜 언제 해.'] : ['저기요, 계산이요!', '저 좀 급한데요…'];
+        this.log('customer', `${c.label}: "${rng.pick(lines)}"`, c.n);
+      } else if (c.fret < 1 && waited > c.patience * 0.45) {
+        c.fret = 1;
       }
     }
     // 진열대가 비면 할 일이 생긴다
@@ -354,7 +379,7 @@ export class ConvenienceShift {
             this.report.fired = true;
           }
         } else if (optionId === 'refuse') {
-          this.log('customer', c?.visitor ? `${c.visitor.name}: "아 야, 우리 사이에 진짜 이러기냐?"` : '손님: "아 됐어요." (나간다)');
+          this.log('customer', c?.visitor ? `${c.visitor.name}: "아 야, 우리 사이에 진짜 이러기냐?"` : '손님: "아 됐어요." (나간다)', c?.n);
           meet('신분증 없다고 안 팔았다', -4, c?.visitor?.relation === 'bully' ? 25 : 8);
           this.job.standing += 2;
         }
@@ -386,7 +411,7 @@ export class ConvenienceShift {
           }
         } else {
           meet('안 된다고 했다', -3, 3);
-          this.log('customer', c?.visitor ? `${c.visitor.name}: "치사하네 ㅋㅋ 알았어."` : '');
+          this.log('customer', c?.visitor ? `${c.visitor.name}: "치사하네 ㅋㅋ 알았어."` : '', c?.n);
         }
         break;
       case 'overpaid':
@@ -489,7 +514,7 @@ export class ConvenienceShift {
     const total = items.reduce((s, p) => s + p.price, 0);
     const pays = rng.chance(0.7) ? total : Math.ceil(total / 10000) * 10000 + (rng.chance(0.2) ? 10000 : 0);
     const c: Customer = {
-      n: this.n, kind, items, arrived: this.minute, patience: (kind === 'elder' ? 8 : kind === 'rude' ? 3 : 5) * (this.opts.patience ?? 1), pays, minor, visitor,
+      n: this.n, kind, items, arrived: this.minute, waitingSince: this.opts.walkIn ? null : this.minute, fret: 0, patience: (kind === 'elder' ? 8 : kind === 'rude' ? 3 : 5) * (this.opts.patience ?? 1), pays, minor, visitor,
       label: visitor ? `${visitor.name}(${({ friend: '친구', classmate: '같은 반', bully: '일진', parentFriend: '엄마 친구', teacher: '선생님', acquaintance: '아는 애' })[visitor.relation]})` : KIND_LABEL[kind],
     };
     this.queue.push(c);
@@ -508,7 +533,7 @@ export class ConvenienceShift {
       teacher: ['…너 여기서 알바하냐? 학교에 신고는 했고?', '(선생님이 컵라면을 들고 서 있다.)'],
       acquaintance: ['어, 안녕.', '(아는 얼굴이다.)'],
     };
-    this.log('people', `${c.label}: "${this.rng.pick(lines[v.relation])}"`);
+    this.log('people', `${c.label}: "${this.rng.pick(lines[v.relation])}"`, c.n);
     if (v.relation === 'parentFriend') {
       this.report.met.push({ visitor: v, note: '편의점에서 알바하는 걸 봤다', closeness: 0, grudge: 0, rumor: `${this.worker.name}이 편의점에서 알바하더라.` });
     }
@@ -553,11 +578,11 @@ export class ConvenienceShift {
       this.report.sales -= changeError;
       this.log('task', changeError > 0 ? `거스름돈을 ${changeError.toLocaleString()}원 더 줬다. 마감 때 시재가 빌 거다.` : `거스름돈을 ${(-changeError).toLocaleString()}원 덜 줬다. "학생, 잔돈 덜 줬잖아!"`);
     }
-    const waited = this.minute - c.arrived;
+    const waited = this.minute - (c.waitingSince ?? c.arrived);
     if (waited <= 2) this.report.servedFast++;
     this.satisfy(Math.max(0, Math.min(100, 100 - waited * 12 - (changeError < 0 ? 40 : 0) + q * 10 - (c.kind === 'rude' ? 15 : 0))));
     if (c.kind === 'rude' && rng.chance(0.4)) {
-      this.log('customer', `반말하는 손님: "${rng.pick(['야, 봉투.', '빨리 좀 해.', '카드 안 되냐?'])}"`);
+      this.log('customer', `반말하는 손님: "${rng.pick(['야, 봉투.', '빨리 좀 해.', '카드 안 되냐?'])}"`, c.n);
       this.report.stress += 3;
     }
   }
@@ -586,8 +611,14 @@ export class ConvenienceShift {
     this.satN++;
   }
 
-  private log(kind: ShiftEvent['kind'], text: string) {
-    if (text) this.report.events.push({ minute: this.minute, text, kind });
+  private log(kind: ShiftEvent['kind'], text: string, who?: number) {
+    if (text) this.report.events.push({ minute: this.minute, text, kind, ...(who !== undefined ? { who } : {}) });
+  }
+
+  /** 화면: 손님이 물건을 다 고르고 줄(계산대 앞)에 섰다. 이때부터 기다림을 센다 */
+  reachedLine(n: number): void {
+    const c = this.queue.find((x) => x.n === n);
+    if (c && c.waitingSince === null) c.waitingSince = this.minute;
   }
 }
 
